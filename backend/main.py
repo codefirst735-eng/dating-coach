@@ -188,10 +188,12 @@ app.add_middleware(
         "http://127.0.0.1:8080",
         "http://localhost:8081",
         "http://127.0.0.1:8081",
+        "https://*.vercel.app",  # Allow all Vercel preview deployments
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Regex for Vercel domains
 )
 
 # --- Routes ---
