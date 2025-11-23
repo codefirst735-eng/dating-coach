@@ -14,47 +14,63 @@
     <link rel="icon" type="image/png" href="favicon.png">
 </head>
 
-<body class="bg-black text-light d-flex align-items-center justify-content-center" style="min-height: 100vh;">
+<body class="bg-black text-light signup-page">
 
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-5 col-lg-4">
-                <div class="text-center mb-4">
-                    <a href="index.html" class="text-decoration-none">
-                        <h2 class="fw-bold text-white text-uppercase tracking-wider">RFH <span
-                                class="text-danger">.</span></h2>
-                    </a>
-                </div>
+    <!-- Header Component -->
+    <div id="header-placeholder"></div>
 
-                <div class="card bg-dark border-secondary p-4">
-                    <div class="card-body">
-                        <h3 class="fw-bold text-white mb-4 text-center">Join the Brotherhood</h3>
-                        <form id="signupForm">
-                            <div class="mb-3">
-                                <label for="name" class="form-label text-white-50 small">Full Name</label>
-                                <input type="text" class="form-control bg-black text-white border-secondary rounded-0"
-                                    id="name" required>
+    <div class="container-fluid signup-container">
+        <div class="row min-vh-100 align-items-center">
+            <!-- Left Side - Signup Form -->
+            <div class="col-lg-5 col-md-6 signup-form-section">
+                <div class="px-4 px-lg-5">
+                    <div class="text-center mb-4 signup-logo d-lg-none">
+                        <a href="index.html" class="text-decoration-none">
+                            <h2 class="fw-bold text-white text-uppercase tracking-wider">RFH <span
+                                    class="text-danger">.</span></h2>
+                        </a>
+                    </div>
+
+                    <div class="card bg-dark border-secondary signup-card">
+                        <div class="card-body p-4 p-lg-5">
+                            <h3 class="fw-bold text-white mb-4 text-center signup-title">Join the RFH Community!</h3>
+                            <form id="signupForm">
+                                <div class="mb-3 form-group-mobile">
+                                    <label for="name" class="form-label text-white-50 small">Full Name</label>
+                                    <input type="text" class="form-control bg-black text-white border-secondary rounded-0 signup-input"
+                                        id="name" required>
+                                </div>
+                                <div class="mb-3 form-group-mobile">
+                                    <label for="email" class="form-label text-white-50 small">Email Address</label>
+                                    <input type="email" class="form-control bg-black text-white border-secondary rounded-0 signup-input"
+                                        id="email" required>
+                                </div>
+                                <div class="mb-4 form-group-mobile">
+                                    <label for="password" class="form-label text-white-50 small">Password</label>
+                                    <input type="password"
+                                        class="form-control bg-black text-white border-secondary rounded-0 signup-input" id="password"
+                                        required>
+                                </div>
+                                <button type="submit"
+                                    class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase mb-3 signup-btn">Create
+                                    Account</button>
+                            </form>
+                            <div class="text-center signup-footer">
+                                <p class="small text-white-50 mb-0">Already have an account? <a href="login.html"
+                                        class="text-danger text-decoration-none fw-bold">Login</a></p>
                             </div>
-                            <div class="mb-3">
-                                <label for="email" class="form-label text-white-50 small">Email Address</label>
-                                <input type="email" class="form-control bg-black text-white border-secondary rounded-0"
-                                    id="email" required>
-                            </div>
-                            <div class="mb-4">
-                                <label for="password" class="form-label text-white-50 small">Password</label>
-                                <input type="password"
-                                    class="form-control bg-black text-white border-secondary rounded-0" id="password"
-                                    required>
-                            </div>
-                            <button type="submit"
-                                class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase mb-3">Create
-                                Account</button>
-                        </form>
-                        <div class="text-center">
-                            <p class="small text-white-50 mb-0">Already have an account? <a href="login.html"
-                                    class="text-danger text-decoration-none fw-bold">Login</a></p>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Right Side - Branding -->
+            <div class="col-lg-7 col-md-6 signup-branding-section d-none d-md-flex align-items-center justify-content-center">
+                <div class="px-4 px-lg-5 text-center text-lg-start">
+                    <div class="border-top border-secondary pt-4 mb-4"></div>
+                    <h1 class="display-4 fw-bold text-white text-uppercase mb-4">Relationship for Humans</h1>
+                    <p class="lead text-white mb-5">Unapologetic truth for modern relationships. We do not sugarcoat reality. We master it.</p>
+            
                 </div>
             </div>
         </div>
@@ -71,7 +87,7 @@
             const password = document.getElementById('password').value;
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/register', {
+                const response = await fetch('http://127.0.0.1:8001/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -90,7 +106,20 @@
                     window.location.href = 'profile.html';
                 } else {
                     const errorData = await response.json();
-                    showToast('Registration failed: ' + errorData.detail, 'error');
+                    const errorMessage = errorData.detail || 'Registration failed';
+                    
+                    // Check if email/username already exists
+                    if (errorMessage.toLowerCase().includes('already registered') || 
+                        errorMessage.toLowerCase().includes('username already') ||
+                        errorMessage.toLowerCase().includes('email')) {
+                        showToast('This email is already registered. Please use a different email or try logging in.', 'error');
+                        // Add shake animation to email input
+                        const emailInput = document.getElementById('email');
+                        emailInput.classList.add('shake-error');
+                        setTimeout(() => emailInput.classList.remove('shake-error'), 500);
+                    } else {
+                        showToast('Registration failed: ' + errorMessage, 'error');
+                    }
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -98,6 +127,10 @@
             }
         });
     </script>
+    <!-- Footer Component -->
+    <div id="footer-placeholder"></div>
+
+    <script src="js/components.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/toast.js"></script>
 </body>

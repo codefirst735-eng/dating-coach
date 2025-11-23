@@ -16,18 +16,10 @@
 
 <body class="bg-black text-light">
 
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary">
-        <div class="container">
-            <a class="navbar-brand fw-bold text-uppercase tracking-wider" href="index.html">RFH <span
-                    class="text-danger">.</span></a>
-            <div class="ms-auto d-flex align-items-center">
-                <span class="text-white-50 me-3 small">Welcome, <span id="userName"
-                        class="text-white fw-bold">User</span></span>
-                <button id="logoutBtn" class="btn btn-outline-danger btn-sm rounded-0">Logout</button>
-            </div>
-        </div>
-    </nav>
+    <!-- Header Component -->
+    <div id="header-placeholder"></div>
+
+
 
     <div class="container py-5">
         <div class="row">
@@ -135,6 +127,10 @@
         </div>
     </div>
 
+    <!-- Footer Component -->
+    <div id="footer-placeholder"></div>
+
+    <script src="js/components.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/toast.js"></script>
     <script>
@@ -147,7 +143,7 @@
         // Fetch User Data
         async function fetchUserProfile() {
             try {
-                const response = await fetch('http://127.0.0.1:8000/users/me', {
+                const response = await fetch('http://127.0.0.1:8001/users/me', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -156,16 +152,25 @@
                 if (response.ok) {
                     const userData = await response.json();
 
-                    // Update user info
-                    document.getElementById('userName').textContent = userData.full_name;
-                    document.getElementById('sidebarName').textContent = userData.full_name;
-                    document.querySelector('.card-body h4').textContent = userData.full_name;
-                    document.querySelector('.card-body p').textContent = userData.email;
-                    document.querySelector('.bg-danger.rounded-circle').textContent = userData.full_name.charAt(0).toUpperCase();
+                    // Update Sidebar Info
+                    const sidebarName = document.getElementById('sidebarName');
+                    if (sidebarName) sidebarName.textContent = userData.full_name;
+
+                    const sidebarPlan = document.getElementById('sidebarPlan');
+                    if (sidebarPlan) sidebarPlan.textContent = `The ${userData.subscription_plan}`;
+
+                    // Update Avatar Initial
+                    const avatar = document.querySelector('.bg-danger.rounded-circle');
+                    if (avatar && userData.full_name) {
+                        avatar.textContent = userData.full_name.charAt(0).toUpperCase();
+                    }
 
                     // Update Stats
-                    document.getElementById('queriesUsed').textContent = userData.queries_used;
-                    document.getElementById('screenshotsAnalyzed').textContent = userData.screenshots_analyzed;
+                    const queriesUsedEl = document.getElementById('queriesUsed');
+                    if (queriesUsedEl) queriesUsedEl.textContent = userData.queries_used;
+
+                    const screenshotsAnalyzedEl = document.getElementById('screenshotsAnalyzed');
+                    if (screenshotsAnalyzedEl) screenshotsAnalyzedEl.textContent = userData.screenshots_analyzed;
 
                     // Calculate queries left based on plan
                     const queryLimits = {
@@ -174,23 +179,31 @@
                         'Master': 999999
                     };
                     const limit = queryLimits[userData.subscription_plan] || 10;
-                    document.getElementById('queriesLeft').textContent = Math.max(0, limit - userData.queries_used);
+                    const queriesLeftEl = document.getElementById('queriesLeft');
+                    if (queriesLeftEl) {
+                        queriesLeftEl.textContent = userData.subscription_plan === 'Master' ? '∞' : Math.max(0, limit - userData.queries_used);
+                    }
 
-                    // Update Plan Info
-                    const planName = `The ${userData.subscription_plan}`;
-                    document.getElementById('sidebarPlan').textContent = planName;
-                    document.getElementById('currentPlanName').textContent = planName;
+                    // Update Plan Info Card
+                    const currentPlanNameEl = document.getElementById('currentPlanName');
+                    if (currentPlanNameEl) currentPlanNameEl.textContent = `The ${userData.subscription_plan}`;
 
-                    if (userData.plan_expiry) {
-                        const expiryDate = new Date(userData.plan_expiry);
-                        document.getElementById('planExpiry').textContent = `Active until ${expiryDate.toLocaleDateString()}`;
-                    } else {
-                        document.getElementById('planExpiry').textContent = 'Free Plan';
+                    const planExpiryEl = document.getElementById('planExpiry');
+                    if (planExpiryEl) {
+                        if (userData.plan_expiry) {
+                            const expiryDate = new Date(userData.plan_expiry);
+                            planExpiryEl.textContent = `Active until ${expiryDate.toLocaleDateString()}`;
+                        } else {
+                            planExpiryEl.textContent = 'Free Plan';
+                        }
                     }
 
                     // Populate edit form
-                    document.getElementById('editFullName').value = userData.full_name;
-                    document.getElementById('editEmail').value = userData.email;
+                    const editFullName = document.getElementById('editFullName');
+                    if (editFullName) editFullName.value = userData.full_name;
+
+                    const editEmail = document.getElementById('editEmail');
+                    if (editEmail) editEmail.value = userData.email;
 
                 } else {
                     // Token invalid or expired
@@ -205,49 +218,47 @@
         fetchUserProfile();
 
         // Edit Profile Form Handler
-        document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        const editProfileForm = document.getElementById('editProfileForm');
+        if (editProfileForm) {
+            editProfileForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
 
-            const fullName = document.getElementById('editFullName').value;
-            const email = document.getElementById('editEmail').value;
+                const fullName = document.getElementById('editFullName').value;
+                const email = document.getElementById('editEmail').value;
 
-            try {
-                const response = await fetch('http://127.0.0.1:8000/update-profile', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        full_name: fullName,
-                        email: email
-                    })
-                });
+                try {
+                    const response = await fetch('http://127.0.0.1:8001/update-profile', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            full_name: fullName,
+                            email: email
+                        })
+                    });
 
-                if (response.ok) {
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
-                    modal.hide();
+                    if (response.ok) {
+                        // Close modal
+                        const modalEl = document.getElementById('editProfileModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        modal.hide();
 
-                    // Refresh profile data
-                    fetchUserProfile();
+                        // Refresh profile data
+                        fetchUserProfile();
 
-                    showToast('Profile updated successfully!', 'success');
-                } else {
-                    const error = await response.json();
-                    showToast(error.detail || 'Failed to update profile', 'error');
+                        showToast('Profile updated successfully!', 'success');
+                    } else {
+                        const error = await response.json();
+                        showToast(error.detail || 'Failed to update profile', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error updating profile:', error);
+                    showToast('An error occurred while updating profile', 'error');
                 }
-            } catch (error) {
-                console.error('Error updating profile:', error);
-                showToast('An error occurred while updating profile', 'error');
-            }
-        });
-
-        // Logout Logic
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.removeItem('access_token');
-            window.location.href = 'index.html';
-        });
+            });
+        }
     </script>
 </body>
 

@@ -22,41 +22,17 @@
 
 <body class="bg-black text-light">
 
-  <!-- Navigation -->
-  <nav class="navbar navbar-expand-lg navbar-dark fixed-top" id="mainNav">
-    <div class="container">
-      <a class="navbar-brand fw-bold text-uppercase tracking-wider" href="#">RFH <span class="text-danger">.</span></a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="#philosophy">The Truth</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="screenshot-analysis.html">Analyzer</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#coaching">Coaching</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="results.html">Results</a>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </nav>
+  <!-- Header Component -->
+  <div id="header-placeholder"></div>
 
   <!-- Hero Section -->
   <header class="hero-section d-flex align-items-center text-center">
     <div class="container position-relative z-2">
-      <h1 class="display-1 fw-black text-uppercase mb-3 glitch-effect">Wake Up</h1>
-      <p class="lead mb-5 text-white-50 mx-auto" style="max-width: 600px;">Stop playing by rules that were designed to
+      <h1 class="display-1 fw-black text-uppercase mb-3 glitch-effect hero-title">Wake Up</h1>
+      <p class="lead mb-5 text-white-50 mx-auto hero-subtitle" style="max-width: 600px;">Stop playing by rules that were designed to
         make you fail. Understand the dynamics. Master your reality.</p>
-      <div class="d-flex justify-content-center gap-3">
-        <a href="chat.html" class="btn btn-danger btn-lg rounded-0 px-5 fw-bold text-uppercase">Start Your Journey</a>
+      <div class="d-flex justify-content-center gap-3 hero-buttons">
+        <a href="chat.html" class="btn btn-danger btn-lg rounded-0 px-5 fw-bold text-uppercase">Take The Pill</a>
         <a href="screenshot-analysis.html"
           class="btn btn-outline-light btn-lg rounded-0 px-5 fw-bold text-uppercase">Analyze Texts</a>
       </div>
@@ -65,12 +41,12 @@
   </header>
 
   <!-- Philosophy Section -->
-  <section id="philosophy" class="py-5">
-    <div class="container py-5">
+  <section id="philosophy" class="py-4">
+    <div class="container py-4">
       <div class="row align-items-center">
         <div class="col-lg-6 mb-5 mb-lg-0">
-          <h2 class="display-4 fw-bold text-uppercase mb-4">The Game Has <span class="text-danger">Changed</span></h2>
-          <div class="border-start border-danger border-4 ps-4">
+          <h2 class="display-4 fw-bold text-uppercase mb-4 philosophy-title">The Game Has <span class="text-danger">Changed</span></h2>
+          <div class="border-start border-danger border-4 ps-4 philosophy-content">
             <p class="lead text-light">Society tells you to be nice. To wait your turn. To hope for the best.</p>
             <p class="text-white-50">That is a prescription for confusion and disappointment. At Relationship for
               Humans, we strip away the comforting lies and show you the raw mechanics of attraction and human dynamics.
@@ -80,25 +56,25 @@
         </div>
         <div class="col-lg-6">
           <div class="row g-4">
-            <div class="col-md-6">
+            <div class="col-md-6 philosophy-card">
               <div class="p-4 border border-secondary bg-dark-subtle h-100">
                 <h4 class="text-danger fw-bold">01. Frame</h4>
                 <p class="small text-white-50">Control the context of your interactions. Never seek validation.</p>
               </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6 philosophy-card">
               <div class="p-4 border border-secondary bg-dark-subtle h-100">
                 <h4 class="text-danger fw-bold">02. Value</h4>
                 <p class="small text-white-50">Build undeniable value. Become the prize, not the pursuer.</p>
               </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6 philosophy-card">
               <div class="p-4 border border-secondary bg-dark-subtle h-100">
                 <h4 class="text-danger fw-bold">03. Nature</h4>
                 <p class="small text-white-50">Understand evolutionary psychology. Don't fight biology.</p>
               </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6 philosophy-card">
               <div class="p-4 border border-secondary bg-dark-subtle h-100">
                 <h4 class="text-danger fw-bold">04. Mission</h4>
                 <p class="small text-white-50">Your purpose comes first. Everything else follows.</p>
@@ -111,27 +87,27 @@
   </section>
 
   <!-- Feature Section: Screenshot Analysis -->
-  <section class="py-5 bg-black border-top border-bottom border-secondary">
-    <div class="container py-5">
+  <section class="py-4 bg-black border-top border-bottom border-secondary">
+    <div class="container py-4">
       <div class="row align-items-center">
         <div class="col-lg-5 order-lg-2">
-          <div class="p-5 border border-danger bg-dark-subtle text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#d00000"
-              class="bi bi-chat-square-text mb-4" viewBox="0 0 16 16">
+          <div class="p-4 border border-danger bg-dark-subtle text-center decode-box">
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="54" fill="#d00000"
+              class="bi bi-chat-square-text mb-3" viewBox="0 0 16 16">
               <path
                 d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-2.5a2 2 0 0 0-1.6.8L8 14.333 6.1 12.8a2 2 0 0 0-1.6-.8H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2.5l3.5 3.5 3.5-3.5H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z" />
               <path
                 d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6zm0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z" />
             </svg>
             <h3 class="fw-bold text-white mb-3">Decode Texts</h3>
-            <p class="text-white-50 mb-4">Upload screenshots. Get instant tactical analysis. Know exactly what to say.
+            <p class="text-white-50 mb-3">Upload screenshots. Get instant tactical analysis. Know exactly what to say.
             </p>
             <a href="screenshot-analysis.html" class="btn btn-danger rounded-0 fw-bold text-uppercase px-4">Try
               Analyzer</a>
           </div>
         </div>
-        <div class="col-lg-7 order-lg-1 mb-5 mb-lg-0">
-          <h2 class="display-5 fw-bold text-uppercase mb-4">Don't Guess. <span class="text-danger">Know.</span></h2>
+        <div class="col-lg-7 order-lg-1 mb-3 mb-lg-0">
+          <h2 class="display-5 fw-bold text-uppercase mb-3">Don't Guess. <span class="text-danger">Know.</span></h2>
           <p class="lead text-light mb-4">One wrong text can kill attraction instantly. Our AI Text Analyzer reads
             between the lines.</p>
           <ul class="list-unstyled text-white-50">
@@ -214,26 +190,11 @@
     </div>
   </section>
 
-  <!-- Footer -->
-  <footer class="bg-black text-white-50 py-5 border-top border-secondary">
-    <div class="container">
-      <div class="row">
-        <div class="col-md-6 mb-4 mb-md-0">
-          <h4 class="text-white fw-bold text-uppercase mb-3">Relationship for Humans</h4>
-          <p class="small">Unapologetic truth for the modern man. We do not sugarcoat reality. We master it.</p>
-        </div>
-        <div class="col-md-6 text-md-end">
-          <ul class="list-inline">
-            <li class="list-inline-item"><a href="#" class="text-white-50 text-decoration-none">Terms</a></li>
-            <li class="list-inline-item"><a href="#" class="text-white-50 text-decoration-none">Privacy</a></li>
-            <li class="list-inline-item"><a href="#" class="text-white-50 text-decoration-none">Contact</a></li>
-          </ul>
-          <p class="small mt-3">&copy; 2025 RFH. All rights reserved.</p>
-        </div>
-      </div>
-    </div>
-  </footer>
+  <!-- Footer Component -->
+  <div id="footer-placeholder"></div>
 
+  <!-- Load components first, then other scripts -->
+  <script src="js/components.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
     crossorigin="anonymous"></script>
@@ -251,7 +212,7 @@
       }
 
       try {
-        const response = await fetch('http://127.0.0.1:8000/update-plan', {
+        const response = await fetch('http://127.0.0.1:8001/update-plan', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

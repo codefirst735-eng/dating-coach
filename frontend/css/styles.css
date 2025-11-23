@@ -4,6 +4,8 @@ body {
     background-color: #0a0a0a;
     color: #f0f0f0;
     overflow-x: hidden;
+    padding-top: 70px;
+    /* offset for fixed navbar */
 }
 
 h1,
@@ -30,6 +32,25 @@ h6,
     background-color: rgba(10, 10, 10, 0.95) !important;
     backdrop-filter: blur(10px);
     border-bottom: 1px solid #333;
+    padding: 0.75rem 0;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    padding: 0.5rem 0;
+}
+
+.navbar-toggler {
+    border-color: #333;
+    padding: 0.25rem 0.5rem;
+}
+
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 0.2rem rgba(208, 0, 0, 0.25);
+}
+
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
 .nav-link {
@@ -39,17 +60,60 @@ h6,
     font-size: 0.9rem;
     letter-spacing: 1px;
     transition: color 0.3s ease;
+    padding: 0.5rem 1rem !important;
 }
 
 .nav-link:hover {
     color: #fff !important;
 }
 
+.nav-link.btn {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.navbar-nav {
+    align-items: center;
+}
+
+/* Responsive Navbar */
+@media (max-width: 991px) {
+    .navbar-collapse {
+        background-color: rgba(10, 10, 10, 0.98);
+        border-top: 1px solid #333;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    .navbar-nav {
+        text-align: center;
+    }
+
+    .nav-item {
+        margin: 0.25rem 0;
+    }
+
+    .nav-link.btn {
+        display: inline-block;
+        margin: 0.5rem auto;
+        width: auto;
+        min-width: 120px;
+    }
+
+    .navbar-brand {
+        font-size: 1.25rem;
+    }
+}
+
 /* Hero Section */
 .hero-section {
-    height: 100vh;
+    min-height: 75vh;
+    height: auto;
     background: url('https://images.unsplash.com/photo-1494587416117-f101a2923378?q=80&w=2070&auto=format&fit=crop') no-repeat center center/cover;
-    position: relative;
+    margin-top: 50px;
+    padding: 4rem 0;
+    /* space below fixed navbar */
     color: white;
 }
 
@@ -58,7 +122,7 @@ h6,
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: 60%;
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.9) 100%);
     z-index: 1;
 }
@@ -130,7 +194,11 @@ h6,
     transform: scale(1.08);
 }
 
-/* Utilities */
+.chat-container {
+    margin-top: 70px;
+    /* space below fixed navbar */
+}
+
 .bg-dark-gradient {
     background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
 }
@@ -141,6 +209,196 @@ h6,
 
 .border-secondary {
     border-color: #333 !important;
+}
+
+/* Reduce spacing between hero and philosophy section */
+#philosophy {
+    padding-top: 2rem !important;
+    padding-bottom: 3rem !important;
+}
+
+#philosophy .container {
+    padding-top: 1rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* Reduce spacing in Decode Texts section */
+section.py-4.bg-black .row {
+    margin: 0;
+}
+
+section.py-4.bg-black .col-lg-5,
+section.py-4.bg-black .col-lg-7 {
+    margin-bottom: 1rem;
+}
+
+.decode-box {
+    margin-bottom: 1rem !important;
+}
+
+@media (min-width: 992px) {
+    section.py-4.bg-black .col-lg-5,
+    section.py-4.bg-black .col-lg-7 {
+        margin-bottom: 0;
+    }
+}
+
+/* Signup Page Specific Styles */
+.signup-page {
+    min-height: 100vh;
+    padding-top: 70px;
+}
+
+.signup-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+}
+
+.signup-form-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 70px);
+    padding: 2rem 0;
+}
+
+.signup-branding-section {
+    background-color: #0a0a0a;
+    min-height: calc(100vh - 70px);
+}
+
+.signup-card {
+    padding: 1.5rem !important;
+    animation: fadeInUp 0.6s ease-out;
+    box-shadow: 0 10px 40px rgba(208, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.signup-card:hover {
+    box-shadow: 0 15px 50px rgba(208, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+.signup-title {
+    animation: slideInDown 0.5s ease-out 0.2s both;
+}
+
+.signup-logo {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.signup-logo h2 {
+    transition: all 0.3s ease;
+}
+
+.signup-logo h2:hover {
+    transform: scale(1.05);
+    text-shadow: 0 0 20px rgba(208, 0, 0, 0.5);
+}
+
+.signup-input {
+    transition: all 0.3s ease;
+    animation: fadeIn 0.6s ease-out;
+}
+
+.signup-input:focus {
+    border-color: #d00000 !important;
+    box-shadow: 0 0 0 0.2rem rgba(208, 0, 0, 0.25) !important;
+    transform: scale(1.02);
+}
+
+.signup-btn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.8s ease-out;
+}
+
+.signup-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.signup-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.signup-btn:active {
+    transform: scale(0.98);
+}
+
+.form-group-mobile {
+    animation: fadeInLeft 0.5s ease-out;
+}
+
+.signup-footer {
+    animation: fadeIn 0.8s ease-out;
+}
+
+/* Shake animation for error */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+    20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+
+.shake-error {
+    animation: shake 0.5s ease-in-out;
+    border-color: #ff4444 !important;
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.5) !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Responsive Adjustments */
@@ -173,5 +431,935 @@ h6,
 
     .navbar-brand {
         font-size: 1.5rem;
+    }
+
+    /* Mobile Signup Page Enhancements */
+    .signup-page {
+        padding-top: 70px;
+    }
+
+    .signup-form-section {
+        min-height: auto;
+        padding: 2rem 1rem;
+    }
+
+    .signup-branding-section {
+        display: none !important;
+    }
+
+    .signup-container {
+        padding: 0;
+    }
+
+    .signup-card {
+        padding: 1.25rem !important;
+        margin: 0;
+        border-radius: 0 !important;
+        box-shadow: 0 5px 25px rgba(208, 0, 0, 0.3);
+        animation: slideInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .signup-card .card-body {
+        padding: 1rem !important;
+    }
+
+    .signup-logo {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .signup-logo h2 {
+        font-size: 1.75rem;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    .signup-title {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem !important;
+        animation: slideInDown 0.5s ease-out 0.2s both;
+    }
+
+    .form-group-mobile {
+        margin-bottom: 1.25rem !important;
+        animation: fadeInLeft 0.5s ease-out;
+        animation-fill-mode: both;
+    }
+
+    .form-group-mobile:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .form-group-mobile:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .form-group-mobile:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    .signup-input {
+        padding: 0.75rem !important;
+        font-size: 1rem;
+        border-width: 2px;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .signup-input:focus {
+        transform: scale(1.03);
+        border-color: #d00000 !important;
+        box-shadow: 0 0 15px rgba(208, 0, 0, 0.4) !important;
+    }
+
+    .signup-btn {
+        padding: 0.875rem !important;
+        font-size: 0.95rem;
+        letter-spacing: 1px;
+        margin-bottom: 1rem !important;
+        position: relative;
+        overflow: hidden;
+        animation: fadeInUp 0.6s ease-out 0.4s both;
+    }
+
+    .signup-btn::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .signup-btn:hover::after {
+        left: 100%;
+    }
+
+    .signup-btn:active {
+        transform: scale(0.95);
+    }
+
+    .signup-footer {
+        margin-top: 1rem;
+        animation: fadeIn 0.8s ease-out 0.5s both;
+    }
+
+    .signup-footer p {
+        font-size: 0.875rem;
+    }
+
+    /* Enhanced mobile animations */
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(50px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+            text-shadow: 0 0 10px rgba(208, 0, 0, 0.3);
+        }
+        50% {
+            transform: scale(1.05);
+            text-shadow: 0 0 20px rgba(208, 0, 0, 0.6);
+        }
+    }
+
+    /* Add glow effect on mobile */
+    .signup-card::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, #d00000, #ff0000, #d00000);
+        border-radius: inherit;
+        z-index: -1;
+        opacity: 0;
+        animation: borderGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes borderGlow {
+        0%, 100% {
+            opacity: 0;
+        }
+        50% {
+            opacity: 0.3;
+        }
+    }
+
+    /* Input focus glow for mobile */
+    .signup-input:focus {
+        background-color: #1a1a1a !important;
+    }
+
+    /* Button ripple effect for mobile */
+    .signup-btn {
+        position: relative;
+    }
+}
+
+@media (max-width: 480px) {
+    .signup-page {
+        padding-top: 60px;
+    }
+
+    .signup-form-section {
+        padding: 1.5rem 0.75rem;
+    }
+
+    .signup-card {
+        padding: 1rem !important;
+    }
+
+    .signup-card .card-body {
+        padding: 0.75rem !important;
+    }
+
+    .signup-title {
+        font-size: 1.25rem;
+        margin-bottom: 1.25rem !important;
+    }
+
+    .signup-logo h2 {
+        font-size: 1.5rem;
+    }
+
+    .form-group-mobile {
+        margin-bottom: 1rem !important;
+    }
+
+    .signup-input {
+        padding: 0.65rem !important;
+        font-size: 0.95rem;
+    }
+
+    .signup-btn {
+        padding: 0.75rem !important;
+        font-size: 0.9rem;
+    }
+}
+
+/* ============================================
+   COMPREHENSIVE MOBILE RESPONSIVE STYLES
+   ============================================ */
+
+/* Homepage Mobile Enhancements */
+@media (max-width: 768px) {
+    /* Hero Section Mobile */
+    .hero-section {
+        height: auto;
+        min-height: auto;
+        padding: 3rem 1rem !important;
+        margin-top: 70px;
+        position: relative;
+        animation: fadeInHero 1s ease-out;
+    }
+
+    .hero-section .container {
+        position: relative;
+        z-index: 2;
+        padding: 0 1rem;
+    }
+
+    .hero-section h1.display-1 {
+        font-size: 2.5rem !important;
+        margin-bottom: 1.5rem !important;
+        animation: slideInDownMobile 0.8s ease-out;
+        text-shadow: 0 0 30px rgba(208, 0, 0, 0.5);
+    }
+
+    .hero-section .lead {
+        font-size: 1rem !important;
+        margin-bottom: 2rem !important;
+        padding: 0 0.5rem;
+        animation: fadeInUp 0.8s ease-out 0.3s both;
+    }
+
+    .hero-section .d-flex.gap-3 {
+        flex-direction: column;
+        gap: 1rem !important;
+        animation: fadeInUp 0.8s ease-out 0.5s both;
+    }
+
+    .hero-section .btn {
+        width: 100%;
+        padding: 0.875rem 1.5rem !important;
+        font-size: 0.9rem;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .hero-section .btn::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+
+    .hero-section .btn:active::after {
+        width: 300px;
+        height: 300px;
+    }
+
+    /* Philosophy Section Mobile */
+    #philosophy {
+        padding: 2rem 1rem !important;
+        margin-top: -1rem;
+    }
+
+    #philosophy .container {
+        padding: 0 !important;
+    }
+
+    #philosophy h2.display-4 {
+        font-size: 1.75rem !important;
+        margin-bottom: 2rem !important;
+        animation: fadeInLeft 0.6s ease-out;
+        text-align: center;
+    }
+
+    #philosophy .border-start {
+        border-left: none !important;
+        border-top: 4px solid #d00000 !important;
+        padding-left: 0 !important;
+        padding-top: 1rem;
+        margin-bottom: 2rem;
+        animation: fadeInUp 0.6s ease-out 0.2s both;
+    }
+
+    #philosophy .row.g-4 > div {
+        margin-bottom: 1rem;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    #philosophy .row.g-4 > div:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    #philosophy .row.g-4 > div:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    #philosophy .row.g-4 > div:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    #philosophy .row.g-4 > div:nth-child(4) {
+        animation-delay: 0.4s;
+    }
+
+    #philosophy .p-4 {
+        padding: 1.25rem !important;
+        transition: all 0.3s ease;
+    }
+
+    #philosophy .p-4:active {
+        transform: scale(0.98);
+        border-color: #d00000 !important;
+    }
+
+    /* Feature Section Mobile */
+    section.py-4.bg-black,
+    section.py-5.bg-black {
+        padding: 2rem 1rem !important;
+    }
+
+    section.py-4.bg-black .container,
+    section.py-5.bg-black .container {
+        padding: 1rem 0 !important;
+    }
+
+    section.py-4.bg-black h2.display-5,
+    section.py-5.bg-black h2.display-5 {
+        font-size: 1.5rem !important;
+        margin-bottom: 1.25rem !important;
+        text-align: center;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    section.py-4.bg-black .lead,
+    section.py-5.bg-black .lead {
+        font-size: 0.95rem !important;
+        margin-bottom: 1.25rem !important;
+        animation: fadeInUp 0.6s ease-out 0.2s both;
+    }
+
+    section.py-4.bg-black .list-unstyled li,
+    section.py-5.bg-black .list-unstyled li {
+        font-size: 0.9rem;
+        margin-bottom: 0.875rem !important;
+        padding-left: 0.5rem;
+        animation: fadeInLeft 0.5s ease-out;
+    }
+
+    section.py-4.bg-black .list-unstyled li:nth-child(1),
+    section.py-5.bg-black .list-unstyled li:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    section.py-4.bg-black .list-unstyled li:nth-child(2),
+    section.py-5.bg-black .list-unstyled li:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    section.py-4.bg-black .list-unstyled li:nth-child(3),
+    section.py-5.bg-black .list-unstyled li:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    .decode-box {
+        padding: 1.5rem !important;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        animation: fadeInUp 0.6s ease-out 0.4s both;
+    }
+
+    section.py-4.bg-black .p-5,
+    section.py-5.bg-black .p-5 {
+        padding: 1.5rem !important;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        animation: fadeInUp 0.6s ease-out 0.4s both;
+    }
+
+    /* Pricing Section Mobile */
+    #coaching {
+        padding: 3rem 1rem !important;
+    }
+
+    #coaching .container {
+        padding: 0 !important;
+    }
+
+    #coaching h2.display-4 {
+        font-size: 1.75rem !important;
+        margin-bottom: 1rem !important;
+        animation: fadeInDown 0.6s ease-out;
+    }
+
+    #coaching .text-danger.fw-bold {
+        font-size: 0.85rem !important;
+        margin-bottom: 2rem !important;
+        animation: fadeIn 0.6s ease-out 0.2s both;
+    }
+
+    #coaching .row.g-4 {
+        margin: 0 !important;
+    }
+
+    #coaching .col-lg-4 {
+        margin-bottom: 1.5rem;
+        padding: 0 0.5rem;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    #coaching .col-lg-4:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    #coaching .col-lg-4:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    #coaching .col-lg-4:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    #coaching .pricing-card {
+        margin: 0;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #coaching .pricing-card:active {
+        transform: scale(0.98);
+    }
+
+    #coaching .card-body {
+        padding: 1.5rem !important;
+    }
+
+    #coaching .card-title {
+        font-size: 1.25rem;
+    }
+
+    #coaching h2.display-5 {
+        font-size: 2rem !important;
+    }
+
+    #coaching .list-unstyled li {
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem !important;
+    }
+
+    #coaching .btn {
+        padding: 0.75rem !important;
+        font-size: 0.875rem;
+    }
+
+    /* Login Page Mobile */
+    body.d-flex.align-items-center {
+        padding: 1rem;
+        padding-top: 80px;
+        min-height: calc(100vh - 80px);
+    }
+
+    body.d-flex.align-items-center .container {
+        padding: 0;
+    }
+
+    body.d-flex.align-items-center .card {
+        padding: 1.25rem !important;
+        animation: slideInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    body.d-flex.align-items-center .card-body {
+        padding: 1rem !important;
+    }
+
+    body.d-flex.align-items-center h3 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem !important;
+    }
+
+    body.d-flex.align-items-center .form-control {
+        padding: 0.75rem !important;
+        font-size: 1rem;
+    }
+
+    body.d-flex.align-items-center .btn {
+        padding: 0.875rem !important;
+        font-size: 0.95rem;
+    }
+
+    /* Profile Page Mobile */
+    .container.py-5 {
+        padding: 2rem 1rem !important;
+    }
+
+    .container.py-5 .row {
+        margin: 0;
+    }
+
+    .container.py-5 .col-md-4,
+    .container.py-5 .col-md-8 {
+        padding: 0;
+        margin-bottom: 1.5rem;
+    }
+
+    .container.py-5 .card {
+        margin-bottom: 1.5rem;
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .container.py-5 .card:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .container.py-5 .card:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .container.py-5 .card:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    .container.py-5 .card-body {
+        padding: 1.25rem !important;
+    }
+
+    .container.py-5 .card-header {
+        padding: 1rem !important;
+    }
+
+    .container.py-5 .row.g-4 {
+        margin: 0 !important;
+    }
+
+    .container.py-5 .col-4 {
+        padding: 0.5rem;
+    }
+
+    .container.py-5 h3 {
+        font-size: 1.5rem;
+    }
+
+    .container.py-5 .btn {
+        padding: 0.75rem !important;
+        font-size: 0.875rem;
+    }
+
+    /* Chat Page Mobile */
+    .chat-container {
+        margin-top: 70px;
+        height: calc(100vh - 70px);
+        padding: 0;
+    }
+
+    .chat-history {
+        padding: 1rem !important;
+        padding-bottom: 0.5rem;
+    }
+
+    .message {
+        max-width: 85% !important;
+        padding: 0.875rem 1rem !important;
+        font-size: 0.9rem !important;
+        margin-bottom: 1rem !important;
+        animation: fadeInMessage 0.3s ease-out;
+    }
+
+    .chat-input-area {
+        padding: 1rem !important;
+        position: sticky;
+        bottom: 0;
+        background-color: #0a0a0a;
+        border-top: 2px solid #333;
+    }
+
+    .chat-input-area .form-control {
+        padding: 0.75rem !important;
+        font-size: 0.95rem;
+    }
+
+    .chat-input-area .btn {
+        padding: 0.75rem 1.25rem !important;
+        font-size: 0.875rem;
+    }
+
+    /* Screenshot Analysis Mobile */
+    .container.py-5:has(.upload-area) {
+        padding: 2rem 1rem !important;
+    }
+
+    .upload-area {
+        padding: 2rem 1rem !important;
+        margin: 0;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .upload-area svg {
+        width: 40px !important;
+        height: 40px !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .upload-area h4 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .upload-area p {
+        font-size: 0.85rem;
+    }
+
+    .analysis-result {
+        padding: 1.25rem !important;
+        margin-top: 1.5rem !important;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .analysis-result h4 {
+        font-size: 1.25rem;
+        margin-bottom: 1rem !important;
+    }
+
+    .analysis-result p {
+        font-size: 0.9rem;
+        margin-bottom: 1rem !important;
+    }
+
+    /* Global Mobile Improvements */
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .card {
+        border-radius: 0 !important;
+    }
+
+    .btn {
+        border-radius: 0 !important;
+    }
+
+    /* Additional Mobile Animations */
+    @keyframes fadeInHero {
+        from {
+            opacity: 0;
+            background-position: center 20%;
+        }
+        to {
+            opacity: 1;
+            background-position: center center;
+        }
+    }
+
+    @keyframes slideInDownMobile {
+        from {
+            opacity: 0;
+            transform: translateY(-30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInMessage {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Mobile Touch Improvements */
+    .btn:active,
+    .card:active,
+    .pricing-card:active {
+        transform: scale(0.97);
+    }
+
+    /* Mobile Scroll Improvements */
+    * {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Mobile Text Improvements */
+    body {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+    }
+
+    /* Flashy Homepage Mobile Animations */
+    .hero-title {
+        position: relative;
+        animation: heroTitleMobile 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    .hero-title::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(208, 0, 0, 0.3), transparent);
+        animation: shimmer 2s infinite;
+        pointer-events: none;
+    }
+
+    .hero-subtitle {
+        animation: fadeInUp 0.8s ease-out 0.4s both;
+        position: relative;
+    }
+
+    .hero-buttons {
+        animation: fadeInUp 0.8s ease-out 0.6s both;
+    }
+
+    .hero-buttons .btn {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .hero-buttons .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s;
+    }
+
+    .hero-buttons .btn:active::before {
+        left: 100%;
+    }
+
+    .philosophy-title {
+        position: relative;
+        animation: fadeInLeft 0.8s ease-out both;
+    }
+
+    .philosophy-content {
+        animation: fadeInUp 0.8s ease-out 0.2s both;
+    }
+
+    .philosophy-card {
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        animation: fadeInUp 0.6s ease-out both;
+    }
+
+    .philosophy-card:active {
+        transform: scale(0.95) translateY(-5px);
+        border-color: #d00000 !important;
+        box-shadow: 0 5px 20px rgba(208, 0, 0, 0.4) !important;
+    }
+
+    /* Pricing Cards Flashy Effects */
+    .pricing-card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .pricing-card::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(208, 0, 0, 0.1) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+
+    .pricing-card:active::before {
+        opacity: 1;
+    }
+
+    /* Additional Mobile Animations */
+    @keyframes heroTitleMobile {
+        0% {
+            opacity: 0;
+            transform: translateY(-50px) scale(0.8) rotateX(90deg);
+        }
+        60% {
+            transform: translateY(10px) scale(1.05) rotateX(0deg);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1) rotateX(0deg);
+        }
+    }
+
+    @keyframes shimmer {
+        0% {
+        transform: translateX(-100%);
+        }
+        100% {
+        transform: translateX(100%);
+        }
+    }
+
+    /* Glow effects for mobile */
+    .glitch-effect {
+        animation: glitch 1s infinite alternate-reverse, mobileGlow 2s ease-in-out infinite;
+    }
+
+    @keyframes mobileGlow {
+        0%, 100% {
+        text-shadow: 2px 2px 0px #ff0000, -2px -2px 0px #0000ff, 0 0 20px rgba(208, 0, 0, 0.5);
+        }
+        50% {
+        text-shadow: 2px 2px 0px #ff0000, -2px -2px 0px #0000ff, 0 0 40px rgba(208, 0, 0, 0.8);
+        }
+    }
+
+    /* Section entrance animations */
+    section {
+        animation: sectionFadeIn 0.8s ease-out both;
+    }
+
+    section:nth-of-type(1) {
+        animation-delay: 0.1s;
+    }
+
+    section:nth-of-type(2) {
+        animation-delay: 0.2s;
+    }
+
+    section:nth-of-type(3) {
+        animation-delay: 0.3s;
+    }
+
+    @keyframes sectionFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Button pulse effect on mobile */
+    .btn-danger {
+        animation: buttonPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes buttonPulse {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(208, 0, 0, 0.4);
+        }
+        50% {
+            box-shadow: 0 0 0 10px rgba(208, 0, 0, 0);
+        }
+    }
+}
+
+/* Extra Small Devices */
+@media (max-width: 480px) {
+    .hero-section h1.display-1 {
+        font-size: 2rem !important;
+    }
+
+    .hero-section .lead {
+        font-size: 0.9rem !important;
+    }
+
+    #philosophy h2.display-4 {
+        font-size: 1.5rem !important;
+    }
+
+    #coaching h2.display-4 {
+        font-size: 1.5rem !important;
+    }
+
+    .container.py-5 {
+        padding: 1.5rem 0.75rem !important;
+    }
+
+    .card-body {
+        padding: 1rem !important;
+    }
+
+    .message {
+        max-width: 90% !important;
+        font-size: 0.85rem !important;
+        padding: 0.75rem !important;
     }
 }

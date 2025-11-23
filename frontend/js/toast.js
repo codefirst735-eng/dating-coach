@@ -123,7 +123,34 @@ toastStyles.textContent = `
         .rfh-toast {
             right: 10px;
             left: 10px;
+            top: 80px;
             min-width: auto;
+            max-width: calc(100% - 20px);
+            padding: 0.875rem 1rem;
+            font-size: 0.9rem;
+            animation: slideInDownMobile 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        .rfh-toast-icon {
+            width: 28px;
+            height: 28px;
+            font-size: 1rem;
+        }
+        
+        .rfh-toast-message {
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        
+        @keyframes slideInDownMobile {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
     }
 `;

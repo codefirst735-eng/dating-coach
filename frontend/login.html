@@ -14,37 +14,40 @@
     <link rel="icon" type="image/png" href="favicon.png">
 </head>
 
-<body class="bg-black text-light d-flex align-items-center justify-content-center" style="min-height: 100vh;">
+<body class="bg-black text-light signup-page">
 
-    <div class="container">
+    <!-- Header Component -->
+    <div id="header-placeholder"></div>
+
+    <div class="container signup-container">
         <div class="row justify-content-center">
-            <div class="col-md-5 col-lg-4">
-                <div class="text-center mb-4">
+            <div class="col-12 col-md-5 col-lg-4">
+                <div class="text-center mb-4 signup-logo">
                     <a href="index.html" class="text-decoration-none">
                         <h2 class="fw-bold text-white text-uppercase tracking-wider">RFH <span
                                 class="text-danger">.</span></h2>
                     </a>
                 </div>
 
-                <div class="card bg-dark border-secondary p-4">
+                <div class="card bg-dark border-secondary signup-card">
                     <div class="card-body">
-                        <h3 class="fw-bold text-white mb-4 text-center">Welcome Back</h3>
+                        <h3 class="fw-bold text-white mb-4 text-center signup-title">Welcome Back</h3>
                         <form id="loginForm">
-                            <div class="mb-3">
+                            <div class="mb-3 form-group-mobile">
                                 <label for="email" class="form-label text-white-50 small">Email Address</label>
-                                <input type="email" class="form-control bg-black text-white border-secondary rounded-0"
+                                <input type="email" class="form-control bg-black text-white border-secondary rounded-0 signup-input"
                                     id="email" required>
                             </div>
-                            <div class="mb-4">
+                            <div class="mb-4 form-group-mobile">
                                 <label for="password" class="form-label text-white-50 small">Password</label>
                                 <input type="password"
-                                    class="form-control bg-black text-white border-secondary rounded-0" id="password"
+                                    class="form-control bg-black text-white border-secondary rounded-0 signup-input" id="password"
                                     required>
                             </div>
                             <button type="submit"
-                                class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase mb-3">Login</button>
+                                class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase mb-3 signup-btn">Login</button>
                         </form>
-                        <div class="text-center">
+                        <div class="text-center signup-footer">
                             <p class="small text-white-50 mb-0">Don't have an account? <a href="signup.html"
                                     class="text-danger text-decoration-none fw-bold">Sign Up</a></p>
                         </div>
@@ -68,7 +71,7 @@
             formData.append('password', password);
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/token', {
+                const response = await fetch('http://127.0.0.1:8001/token', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
@@ -89,7 +92,9 @@
             }
         });
     </script>
+    <script src="js/components.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/navbar.js"></script>
     <script src="js/toast.js"></script>
 </body>
 
