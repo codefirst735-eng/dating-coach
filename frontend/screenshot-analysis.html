@@ -16,6 +16,8 @@
         rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/styles.css">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
     <style>
         .upload-area {
             border: 2px dashed #333;
@@ -117,7 +119,8 @@
                         <li class="mb-2">Please <strong>BLUR</strong> any names, phone numbers, or profile photos in
                             your screenshot.</li>
                         <li class="mb-2">We value your privacy. All images are processed in real-time and
-                            <strong>IMMEDIATELY DELETED</strong> from our servers after analysis.</li>
+                            <strong>IMMEDIATELY DELETED</strong> from our servers after analysis.
+                        </li>
                         <li>We do not store or share your personal conversations.</li>
                     </ul>
                     <div class="form-check mt-3">
@@ -140,6 +143,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
         crossorigin="anonymous"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/toast.js"></script>
     <script>
         const uploadTrigger = document.getElementById('uploadTrigger');
         const fileInput = document.getElementById('fileInput');
@@ -150,8 +155,20 @@
         const resultArea = document.getElementById('resultArea');
         const analysisContent = document.getElementById('analysisContent');
 
+        // Check for token and guest query count
+        const token = localStorage.getItem('access_token');
+        const isGuest = !token;
+        let guestQueryCount = parseInt(localStorage.getItem('guest_query_count') || '0');
+        const GUEST_QUERY_LIMIT = 5;
+
         // Open modal on click
         uploadTrigger.addEventListener('click', () => {
+            // Check guest limit before showing modal
+            if (isGuest && guestQueryCount >= GUEST_QUERY_LIMIT) {
+                showToast('You\'ve used all 5 free analyses! Please sign up or log in to continue.', 'warning');
+                setTimeout(() => window.location.href = 'signup.html', 2000);
+                return;
+            }
             privacyModal.show();
         });
 
@@ -184,21 +201,64 @@
             formData.append('file', file);
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/analyze-screenshot', {
+                let endpoint, headers;
+
+                if (isGuest) {
+                    endpoint = 'http://127.0.0.1:8000/guest-analyze';
+                    headers = {};
+                } else {
+                    endpoint = 'http://127.0.0.1:8000/analyze-screenshot';
+                    headers = { 'Authorization': `Bearer ${token}` };
+                }
+
+                const response = await fetch(endpoint, {
                     method: 'POST',
+                    headers: headers,
                     body: formData
                 });
 
+                if (response.status === 401) {
+                    showToast('Session expired. Please login again.', 'error');
+                    localStorage.removeItem('access_token');
+                    setTimeout(() => window.location.href = 'login.html', 2000);
+                    return;
+                }
+
+                if (response.status === 403) {
+                    const error = await response.json();
+                    showToast(error.detail, 'warning');
+                    setTimeout(() => window.location.href = 'profile.html', 2000);
+                    return;
+                }
+
                 const data = await response.json();
+
+                // Increment guest query count
+                if (isGuest) {
+                    guestQueryCount++;
+                    localStorage.setItem('guest_query_count', guestQueryCount.toString());
+                }
 
                 // Simulate processing delay for effect
                 setTimeout(() => {
                     loadingState.style.display = 'none';
                     resultArea.style.display = 'block';
+
+                    let guestMessage = '';
+                    if (isGuest) {
+                        const queriesLeft = GUEST_QUERY_LIMIT - guestQueryCount;
+                        if (queriesLeft > 0) {
+                            guestMessage = `<p class="small text-warning mt-3"><strong>Note:</strong> You have ${queriesLeft} free analyses remaining. <a href="signup.html" class="text-danger">Sign up</a> to get more!</p>`;
+                        } else {
+                            guestMessage = '<p class="small text-warning mt-3"><strong>That was your last free analysis!</strong> <a href="signup.html" class="text-danger">Sign up now</a> to continue.</p>';
+                        }
+                    }
+
                     analysisContent.innerHTML = `
                         <p class="mb-3"><strong>Assessment:</strong> ${data.assessment}</p>
                         <p class="mb-3 text-danger"><strong>Recommended Reply:</strong> "${data.reply}"</p>
                         <p class="small text-white-50"><strong>Why:</strong> ${data.reasoning}</p>
+                        ${guestMessage}
                     `;
                 }, 2000);
 
@@ -206,7 +266,7 @@
                 console.error('Error:', error);
                 loadingState.style.display = 'none';
                 uploadTrigger.style.display = 'block';
-                alert('Analysis failed. Please try again.');
+                showToast('Analysis failed. Please try again.', 'error');
             }
         }
     </script>
