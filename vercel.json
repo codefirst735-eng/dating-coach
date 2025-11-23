@@ -6,50 +6,14 @@
       "use": "@vercel/python"
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/chat",
-      "dest": "api/index.py"
+      "source": "/api/:path*",
+      "destination": "/api/index.py"
     },
     {
-      "src": "/api/chat/history",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/api/guest-chat",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/api/register",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/api/token",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/api/users/me",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/api/update-profile",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/api/update-plan",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/api/admin/(.*)",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "frontend/$1"
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
     }
   ]
 }
