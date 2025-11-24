@@ -43,27 +43,44 @@ Implemented a dual-coach system with separate male and female relationship coach
 
 ### 4. Chat Interface Changes
 
-#### Gender Toggle (Logged-in Users Only)
-- Button group with two options:
-  - "Male Coach (For Men)" - Blue
-  - "Female Coach (For Women)" - Red
-- Automatically loads user's current preference
-- Saves preference to database on change
-- Clears chat history when switching coaches
+#### Gender Toggle (All Users)
+- **Logged-in users**:
+  - Button group with two options
+  - Preference saved to database
+  - Automatically loads user's current preference
+  - Clears chat history when switching coaches
+  
+- **Guest users**:
+  - Same gender toggle interface
+  - Preference saved to localStorage
+  - Persists across page refreshes
+  - 5 query limit still applies
+  - Access to same PDFs and prompts as logged-in users
 
-#### Guest Users
-- No gender toggle shown
-- Default to male coach
-- Can still use the system
+#### Guest User Enhancements
+- Can toggle between Male/Female coach
+- Uses gender-specific PDFs and prompts
+- Gender preference stored in localStorage
+- Same quality responses as logged-in users
+- Only difference: 5 query limit
 
 ## How It Works
 
-### For Users:
-1. **Login** to the chat interface
+### For All Users (Logged-in & Guest):
+1. **Visit chat interface**
 2. **See gender toggle** above the input box
 3. **Select** Male Coach or Female Coach
 4. **Chat** - AI responds with gender-specific expertise
 5. **Switch anytime** - preference is saved
+   - Logged-in: Saved to database
+   - Guest: Saved to localStorage
+
+### Guest User Specifics:
+- 5 free queries (same as before)
+- Full access to gender-specific coaches
+- Gender preference persists in browser
+- Same PDFs and prompts as logged-in users
+- Can sign up anytime to remove limit
 
 ### For Admins:
 1. **Go to admin panel**
