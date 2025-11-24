@@ -31,8 +31,14 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./users.db"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Initialize Gemini
+print(f"DEBUG: GEMINI_API_KEY loaded: {bool(GEMINI_API_KEY)}")
+print(f"DEBUG: API Key length: {len(GEMINI_API_KEY) if GEMINI_API_KEY else 0}")
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        print("SUCCESS: Gemini API configured successfully")
+    except Exception as e:
+        print(f"ERROR: Failed to configure Gemini API: {e}")
 else:
     print("WARNING: GEMINI_API_KEY not set. AI features will be disabled.")
 
@@ -336,7 +342,9 @@ Your goal is to sound like a real person, not a robot."""
         return {"response": ai_response_text}
         
     except Exception as e:
+        import traceback
         print(f"Gemini API error: {str(e)}")
+        print(f"Full traceback: {traceback.format_exc()}")
         # Fallback responses
         responses = [
             "Stop seeking validation. Focus on your mission.",
