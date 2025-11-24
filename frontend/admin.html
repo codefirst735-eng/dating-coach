@@ -140,7 +140,7 @@
         // Check backend health on page load
         async function checkBackendHealth() {
             try {
-                const response = await fetch('http://127.0.0.1:8001/admin/health');
+                const response = await fetch('https://dating-coach-ytos.onrender.com/admin/health');
                 const data = await response.json();
                 console.log('Backend health:', data);
 
@@ -180,7 +180,7 @@
                     const formData = new FormData();
                     formData.append('file', file);
 
-                    const response = await fetch('http://127.0.0.1:8001/admin/upload-pdf', {
+                    const response = await fetch('https://dating-coach-ytos.onrender.com/admin/upload-pdf', {
                         method: 'POST',
                         body: formData
                     });
@@ -246,7 +246,7 @@
                     }
                 });
 
-                const response = await fetch('http://127.0.0.1:8001/admin/replace-all-files', {
+                const response = await fetch('https://dating-coach-ytos.onrender.com/admin/replace-all-files', {
                     method: 'POST',
                     body: formData
                 });
@@ -271,7 +271,7 @@
         // Load files list
         async function loadFiles() {
             try {
-                const response = await fetch('http://127.0.0.1:8001/admin/list-files');
+                const response = await fetch('https://dating-coach-ytos.onrender.com/admin/list-files');
                 if (response.ok) {
                     const data = await response.json();
                     displayFiles(data.files);
@@ -313,7 +313,7 @@
             if (!confirm(`Delete ${filename}?`)) return;
 
             try {
-                const response = await fetch(`http://127.0.0.1:8001/admin/delete-file/${fileId}`, {
+                const response = await fetch(`https://dating-coach-ytos.onrender.com/admin/delete-file/${fileId}`, {
                     method: 'DELETE'
                 });
 
