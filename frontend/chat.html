@@ -386,9 +386,13 @@
 
                     if (response.ok) {
                         console.log(`Gender preference updated to: ${gender}`);
+                        const message = gender === 'male'
+                            ? "Welcome. I am your Relationship Strategist. I don't offer comforting lies, only effective tactics. What is your current situation?"
+                            : "Welcome. I am your Relationship Guide. I'm here to help you decode his behavior and find clarity. What's on your mind?";
+
                         chatHistory.innerHTML = `
                             <div class="message ai">
-                                <strong>Coach:</strong> Welcome. I'm your ${gender === 'male' ? 'Coach for Men' : 'Coach for Women'}. How can I help you today?
+                                <strong>Coach:</strong> ${message}
                             </div>
                         `;
                     }
@@ -424,9 +428,13 @@
                 // Clear chat history when switching coaches
                 localStorage.removeItem('guest_chat_history');
 
+                const message = gender === 'male'
+                    ? "Welcome. I am your Relationship Strategist. I don't offer comforting lies, only effective tactics. What is your current situation?"
+                    : "Welcome. I am your Relationship Guide. I'm here to help you decode his behavior and find clarity. What's on your mind?";
+
                 chatHistory.innerHTML = `
                     <div class="message ai">
-                        <strong>Coach:</strong> Welcome. I'm your ${gender === 'male' ? 'Coach for Men' : 'Coach for Women'}. How can I help you today?
+                        <strong>Coach:</strong> ${message}
                     </div>
                 `;
             }
