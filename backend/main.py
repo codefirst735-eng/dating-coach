@@ -399,14 +399,46 @@ async def analyze_screenshot(file: UploadFile = File(...), current_user: UserDB 
 
 @app.post("/guest-chat")
 async def guest_chat(request: ChatRequest):
-    # Same logic as chat but without user tracking/files for now, or limited
-    # For simplicity, just return a canned response or use Gemini without files
-    responses = [
-        "Stop seeking validation. Focus on your mission.",
-        "They are testing your boundaries. Do not react emotionally.",
-        "You are the prize. Act like it.",
-    ]
-    return {"response": random.choice(responses)}
+    """Chat endpoint for non-authenticated users."""
+    
+    # System prompt
+    system_prompt = """You are a direct, confident, redpill no bullshit dating coach. You specialize in clarity, masculine energy, male and female psychology and outcome-focused guidance. 
+
+IMPORTANT INSTRUCTIONS:
+- Keep your responses CONCISE and HUMAN-LIKE.
+- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Write in plain text, like you are texting a friend.
+- Be direct and to the point. Avoid long lectures.
+- Focus on actionable advice.
+- If the user asks a simple question, give a simple answer.
+
+Your goal is to sound like a real person, not a robot."""
+
+    if not GEMINI_API_KEY:
+        return {"response": "Gemini API key not configured. Please check .env file."}
+
+    try:
+        # Initialize model (no files for guest users)
+        model = genai.GenerativeModel(
+            model_name="gemini-2.0-flash",
+            system_instruction=system_prompt
+        )
+        
+        # Generate response
+        response = model.generate_content(request.message)
+        return {"response": response.text}
+        
+    except Exception as e:
+        import traceback
+        print(f"Guest chat Gemini API error: {str(e)}")
+        print(f"Full traceback: {traceback.format_exc()}")
+        # Fallback responses
+        responses = [
+            "Stop seeking validation. Focus on your mission.",
+            "They are testing your boundaries. Do not react emotionally.",
+            "You are the prize. Act like it.",
+        ]
+        return {"response": random.choice(responses)}
 
 @app.post("/guest-analyze")
 async def guest_analyze_screenshot(file: UploadFile = File(...)):
