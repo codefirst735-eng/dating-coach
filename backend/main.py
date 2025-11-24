@@ -113,6 +113,7 @@ class TokenData(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    gender_preference: Optional[str] = "male"  # For guest users
 
 class PlanUpdate(BaseModel):
     plan: str
@@ -423,35 +424,78 @@ async def analyze_screenshot(file: UploadFile = File(...), current_user: UserDB 
     }
 
 @app.post("/guest-chat")
-async def guest_chat(request: ChatRequest):
-    """Chat endpoint for non-authenticated users."""
+async def guest_chat(request: ChatRequest, db: Session = Depends(get_db)):
+    """Chat endpoint for non-authenticated users with gender preference support."""
     
-    # System prompt
-    system_prompt = """You are a direct, confident, redpill no bullshit dating coach. You specialize in clarity, masculine energy, male and female psychology and outcome-focused guidance. 
+    # Validate gender preference
+    gender_preference = request.gender_preference if request.gender_preference in ["male", "female"] else "male"
+    
+    # Gender-specific system prompts (same as authenticated users)
+    male_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics. You understand masculine energy, frame control, attraction triggers, and how men can build genuine confidence and success with women.
 
 IMPORTANT INSTRUCTIONS:
 - Provide thoughtful, detailed responses (2-3 paragraphs minimum).
 - Do NOT use Markdown formatting (no bold, no lists, no headers).
 - Write in plain text, like you are texting a knowledgeable friend.
 - Be direct and insightful. Break down the situation and explain the dynamics at play.
+- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
 - Address both the immediate situation and the underlying patterns.
+- Focus on: masculine frame, leadership, attraction psychology, maintaining boundaries, building value.
 
-Your goal is to sound like a real person who deeply understands dating dynamics, not a robot giving one-liners."""
+Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
+
+    female_coach_prompt = """You are a warm, insightful relationship coach specializing in female psychology and modern dating. You understand feminine energy, emotional intelligence, relationship dynamics, and how women can navigate dating while maintaining their standards and authenticity.
+
+IMPORTANT INSTRUCTIONS:
+- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
+- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Write in plain text, like you are texting a supportive friend.
+- Be direct yet empathetic. Break down the situation and explain the dynamics at play.
+- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- Give actionable advice with clear reasoning behind it.
+- Explain WHY things work the way they do, not just WHAT to do.
+- Address both the immediate situation and the underlying patterns.
+- Focus on: recognizing red flags, maintaining standards, emotional intelligence, authentic connection, self-worth.
+
+Your goal is to sound like a real person who deeply understands female dating dynamics, not a robot giving one-liners."""
+
+    # Select prompt based on gender preference
+    system_prompt = male_coach_prompt if gender_preference == "male" else female_coach_prompt
 
     if not GEMINI_API_KEY:
         return {"response": "Gemini API key not configured. Please check .env file."}
 
     try:
-        # Initialize model (no files for guest users)
+        # Get stored files filtered by gender preference (same as authenticated users)
+        stored_files = db.query(GeminiFileDB).filter(
+            GeminiFileDB.gender_category == gender_preference
+        ).all()
+        
+        # Prepare content parts
+        content_parts = []
+        
+        # Add files to context
+        for file_record in stored_files:
+            try:
+                file_obj = genai.get_file(file_record.file_id)
+                content_parts.append(file_obj)
+            except Exception as e:
+                print(f"Error fetching file {file_record.file_id}: {e}")
+                continue
+        
+        # Add user message
+        content_parts.append(request.message)
+        
+        # Initialize model
         model = genai.GenerativeModel(
             model_name="gemini-2.0-flash",
             system_instruction=system_prompt
         )
         
         # Generate response
-        response = model.generate_content(request.message)
+        response = model.generate_content(content_parts)
         return {"response": response.text}
         
     except Exception as e:
