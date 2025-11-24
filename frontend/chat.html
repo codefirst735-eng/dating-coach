@@ -220,6 +220,18 @@
         </div>
         <div class="scroll-hint" id="scrollHint">Scroll down to type your message</div>
         <div class="typing-indicator px-4" id="typingIndicator">Coach is analyzing...</div>
+
+        <!-- Gender Toggle (only for logged-in users) -->
+        <div class="px-4 pb-2" id="genderToggleContainer" style="display: none;">
+            <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="genderPreference" id="maleCoach" value="male" checked>
+                <label class="btn btn-outline-primary" for="maleCoach">Male Coach (For Men)</label>
+
+                <input type="radio" class="btn-check" name="genderPreference" id="femaleCoach" value="female">
+                <label class="btn btn-outline-danger" for="femaleCoach">Female Coach (For Women)</label>
+            </div>
+        </div>
+
         <div class="chat-input-area">
             <form id="chatForm" class="d-flex gap-3">
                 <input type="text" id="userInput"
@@ -306,6 +318,74 @@
         const isGuest = !token;
         let guestQueryCount = parseInt(localStorage.getItem('guest_query_count') || '0');
         const GUEST_QUERY_LIMIT = 5;
+
+        // Gender preference toggle (only for logged-in users)
+        if (!isGuest) {
+            const genderToggleContainer = document.getElementById('genderToggleContainer');
+            const maleCoachRadio = document.getElementById('maleCoach');
+            const femaleCoachRadio = document.getElementById('femaleCoach');
+
+            genderToggleContainer.style.display = 'block';
+
+            // Load user's current gender preference
+            async function loadGenderPreference() {
+                try {
+                    const response = await fetch('https://dating-coach-ytos.onrender.com/users/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const userData = await response.json();
+                        if (userData.gender_preference === 'female') {
+                            femaleCoachRadio.checked = true;
+                        } else {
+                            maleCoachRadio.checked = true;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading gender preference:', error);
+                }
+            }
+
+            loadGenderPreference();
+
+            // Handle gender preference change
+            async function updateGenderPreference(gender) {
+                try {
+                    const response = await fetch('https://dating-coach-ytos.onrender.com/update-profile', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ gender_preference: gender })
+                    });
+
+                    if (response.ok) {
+                        console.log(`Gender preference updated to: ${gender}`);
+                        // Clear chat history to start fresh with new coach
+                        chatHistory.innerHTML = `
+                            <div class="message ai">
+                                <strong>Coach:</strong> Welcome. I'm your ${gender === 'male' ? 'Male' : 'Female'} Relationship Coach. How can I help you today?
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Error updating gender preference:', error);
+                }
+            }
+
+            maleCoachRadio.addEventListener('change', () => {
+                if (maleCoachRadio.checked) {
+                    updateGenderPreference('male');
+                }
+            });
+
+            femaleCoachRadio.addEventListener('change', () => {
+                if (femaleCoachRadio.checked) {
+                    updateGenderPreference('female');
+                }
+            });
+        }
 
         // Show guest status in initial message if applicable
         if (isGuest) {

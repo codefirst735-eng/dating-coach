@@ -66,6 +66,7 @@ class UserDB(Base):
     screenshots_analyzed = Column(Integer, default=0)
     subscription_plan = Column(String, default="Sleeper")
     plan_expiry = Column(String, nullable=True)
+    gender_preference = Column(String, default="male")  # 'male' or 'female'
 
 class GeminiFileDB(Base):
     __tablename__ = "openai_files" # Keep table name to avoid migration issues
@@ -74,6 +75,7 @@ class GeminiFileDB(Base):
     filename = Column(String)
     uploaded_at = Column(String)
     purpose = Column(String, default="assistants")
+    gender_category = Column(String, default="male")  # 'male' or 'female' - which coach uses this PDF
     
 class MessageDB(Base):
     __tablename__ = "messages"
@@ -118,6 +120,7 @@ class PlanUpdate(BaseModel):
 class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[str] = None
+    gender_preference: Optional[str] = None  # 'male' or 'female'
 
 class FileUploadResponse(BaseModel):
     file_id: str
@@ -272,8 +275,8 @@ async def chat(request: ChatRequest, current_user: UserDB = Depends(get_current_
     current_user.queries_used += 1
     db.commit()
     
-    # System prompt
-    system_prompt = """You are a direct, confident, redpill no bullshit dating coach. You specialize in clarity, masculine energy, male and female psychology and outcome-focused guidance. 
+    # Gender-specific system prompts
+    male_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics. You understand masculine energy, frame control, attraction triggers, and how men can build genuine confidence and success with women.
 
 IMPORTANT INSTRUCTIONS:
 - Provide thoughtful, detailed responses (2-3 paragraphs minimum).
@@ -284,15 +287,36 @@ IMPORTANT INSTRUCTIONS:
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
 - Address both the immediate situation and the underlying patterns.
+- Focus on: masculine frame, leadership, attraction psychology, maintaining boundaries, building value.
 
-Your goal is to sound like a real person who deeply understands dating dynamics, not a robot giving one-liners."""
+Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
+
+    female_coach_prompt = """You are a warm, insightful relationship coach specializing in female psychology and modern dating. You understand feminine energy, emotional intelligence, relationship dynamics, and how women can navigate dating while maintaining their standards and authenticity.
+
+IMPORTANT INSTRUCTIONS:
+- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
+- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Write in plain text, like you are texting a supportive friend.
+- Be direct yet empathetic. Break down the situation and explain the dynamics at play.
+- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- Give actionable advice with clear reasoning behind it.
+- Explain WHY things work the way they do, not just WHAT to do.
+- Address both the immediate situation and the underlying patterns.
+- Focus on: recognizing red flags, maintaining standards, emotional intelligence, authentic connection, self-worth.
+
+Your goal is to sound like a real person who deeply understands female dating dynamics, not a robot giving one-liners."""
+
+    # Select prompt based on user's gender preference
+    system_prompt = male_coach_prompt if current_user.gender_preference == "male" else female_coach_prompt
 
     if not GEMINI_API_KEY:
         return {"response": "Gemini API key not configured. Please check .env file."}
 
     try:
-        # Get stored files
-        stored_files = db.query(GeminiFileDB).all()
+        # Get stored files filtered by user's gender preference
+        stored_files = db.query(GeminiFileDB).filter(
+            GeminiFileDB.gender_category == current_user.gender_preference
+        ).all()
         
         # Prepare content parts
         content_parts = []
@@ -482,6 +506,8 @@ async def update_profile(profile_data: ProfileUpdate, current_user: UserDB = Dep
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already in use")
         current_user.email = profile_data.email
+    if profile_data.gender_preference and profile_data.gender_preference in ["male", "female"]:
+        current_user.gender_preference = profile_data.gender_preference
     
     db.commit()
     db.refresh(current_user)
@@ -490,14 +516,21 @@ async def update_profile(profile_data: ProfileUpdate, current_user: UserDB = Dep
 # --- Gemini File Management ---
 
 @app.post("/admin/upload-pdf", response_model=FileUploadResponse)
-async def upload_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    print(f"Received upload request for file: {file.filename}")
+async def upload_pdf(
+    file: UploadFile = File(...), 
+    gender_category: str = "male",  # Default to male if not specified
+    db: Session = Depends(get_db)
+):
+    print(f"Received upload request for file: {file.filename}, gender_category: {gender_category}")
     
     if not GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail="Gemini API not configured")
     
     if not file.filename or not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    
+    if gender_category not in ["male", "female"]:
+        raise HTTPException(status_code=400, detail="gender_category must be 'male' or 'female'")
     
     try:
         # Save to temporary file
@@ -511,12 +544,13 @@ async def upload_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
             uploaded_file = genai.upload_file(tmp_path, mime_type="application/pdf")
             print(f"Gemini upload successful. URI: {uploaded_file.name}")
             
-            # Store in DB
+            # Store in DB with gender category
             file_record = GeminiFileDB(
                 file_id=uploaded_file.name, # Stores 'files/xxxx'
                 filename=file.filename,
                 uploaded_at=datetime.utcnow().isoformat(),
-                purpose="assistants"
+                purpose="assistants",
+                gender_category=gender_category
             )
             db.add(file_record)
             db.commit()
@@ -525,7 +559,7 @@ async def upload_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)
             return FileUploadResponse(
                 file_id=uploaded_file.name,
                 filename=file.filename,
-                message=f"File uploaded successfully. URI: {uploaded_file.name}"
+                message=f"File uploaded successfully for {gender_category} coach. URI: {uploaded_file.name}"
             )
             
         finally:
@@ -545,7 +579,8 @@ async def list_files(db: Session = Depends(get_db)):
             "file_id": f.file_id,
             "filename": f.filename,
             "uploaded_at": f.uploaded_at,
-            "purpose": f.purpose
+            "purpose": f.purpose,
+            "gender_category": f.gender_category
         }
         for f in files
     ]

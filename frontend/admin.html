@@ -72,6 +72,18 @@
                 <div class="card bg-dark border-secondary mb-4">
                     <div class="card-body p-4">
                         <h3 class="text-white mb-3">Upload PDF Files</h3>
+
+                        <!-- Gender Category Selection -->
+                        <div class="mb-4">
+                            <label for="genderCategory" class="form-label text-white">Coach Type</label>
+                            <select id="genderCategory"
+                                class="form-select bg-black text-white border-secondary rounded-0">
+                                <option value="male">Male Relationship Coach (For Men)</option>
+                                <option value="female">Female Relationship Coach (For Women)</option>
+                            </select>
+                            <small class="text-white-50">Select which coach will use these PDFs</small>
+                        </div>
+
                         <div class="file-upload-area" id="uploadArea">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="#d00000"
                                 class="bi bi-cloud-upload mb-3" viewBox="0 0 16 16">
@@ -162,8 +174,9 @@
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
 
-            uploadStatus.innerHTML = '<p class="text-white-50">Uploading files...</p>';
-            console.log(`Starting upload of ${files.length} file(s)`);
+            const genderCategory = document.getElementById('genderCategory').value;
+            uploadStatus.innerHTML = `<p class="text-white-50">Uploading files for ${genderCategory} coach...</p>`;
+            console.log(`Starting upload of ${files.length} file(s) for ${genderCategory} coach`);
 
             let successCount = 0;
             let failCount = 0;
@@ -176,9 +189,10 @@
                 }
 
                 try {
-                    console.log(`Uploading ${file.name}...`);
+                    console.log(`Uploading ${file.name} for ${genderCategory} coach...`);
                     const formData = new FormData();
                     formData.append('file', file);
+                    formData.append('gender_category', genderCategory);
 
                     const response = await fetch('https://dating-coach-ytos.onrender.com/admin/upload-pdf', {
                         method: 'POST',
@@ -290,10 +304,15 @@
                 return;
             }
 
-            fileList.innerHTML = files.map(file => `
+            fileList.innerHTML = files.map(file => {
+                const genderBadge = file.gender_category === 'male'
+                    ? '<span class="badge bg-primary">Male Coach</span>'
+                    : '<span class="badge bg-danger">Female Coach</span>';
+
+                return `
                 <div class="file-item">
                     <div class="file-info">
-                        <h5 class="text-white mb-1">${file.filename}</h5>
+                        <h5 class="text-white mb-1">${file.filename} ${genderBadge}</h5>
                         <p class="text-white-50 small mb-0">
                             File ID: ${file.file_id}<br>
                             Uploaded: ${new Date(file.uploaded_at).toLocaleString()}
@@ -305,7 +324,7 @@
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         // Delete file
