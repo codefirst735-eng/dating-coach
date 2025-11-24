@@ -87,6 +87,46 @@ class MessageDB(Base):
 
 Base.metadata.create_all(bind=engine)
 
+# --- Database Migration (Auto-fix for missing columns) ---
+from sqlalchemy import inspect, text
+
+def run_migrations():
+    """
+    Checks for missing columns in the database and adds them if necessary.
+    This fixes the 'no such column' error on deployment without deleting data.
+    """
+    inspector = inspect(engine)
+    
+    with engine.connect() as conn:
+        # 1. Fix 'openai_files' table (Legacy name kept for data preservation)
+        # We use 'openai_files' because the project started with OpenAI. 
+        # Renaming it now would lose existing data, so we keep the name but use it for Gemini.
+        if "openai_files" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("openai_files")]
+            if "gender_category" not in columns:
+                print("MIGRATION: Adding 'gender_category' column to 'openai_files' table...")
+                try:
+                    conn.execute(text('ALTER TABLE openai_files ADD COLUMN gender_category VARCHAR DEFAULT "male"'))
+                    conn.commit()
+                    print("MIGRATION: Success!")
+                except Exception as e:
+                    print(f"MIGRATION ERROR: {e}")
+
+        # 2. Fix 'users' table
+        if "users" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("users")]
+            if "gender_preference" not in columns:
+                print("MIGRATION: Adding 'gender_preference' column to 'users' table...")
+                try:
+                    conn.execute(text('ALTER TABLE users ADD COLUMN gender_preference VARCHAR DEFAULT "male"'))
+                    conn.commit()
+                    print("MIGRATION: Success!")
+                except Exception as e:
+                    print(f"MIGRATION ERROR: {e}")
+
+# Run migrations on startup
+run_migrations()
+
 # --- Models (Pydantic) ---
 class User(BaseModel):
     username: str
