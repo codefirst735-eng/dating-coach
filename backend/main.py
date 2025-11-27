@@ -26,7 +26,7 @@ load_dotenv(dotenv_path=env_path)
 # --- Configuration ---
 SECRET_KEY = "your-secret-key-change-this-in-production"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 SQLALCHEMY_DATABASE_URL = "sqlite:///./users.db"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
@@ -84,8 +84,59 @@ class MessageDB(Base):
     role = Column(String) # user or assistant
     content = Column(String)
     timestamp = Column(String) # ISO date string
+    coach_type = Column(String, default="male") # 'male' or 'female'
 
 Base.metadata.create_all(bind=engine)
+
+# --- Database Migration (Auto-fix for missing columns) ---
+from sqlalchemy import inspect, text
+
+def run_migrations():
+    """
+    Checks for missing columns in the database and adds them if necessary.
+    This fixes the 'no such column' error on deployment without deleting data.
+    """
+    inspector = inspect(engine)
+    
+    with engine.connect() as conn:
+        # 1. Fix 'openai_files' table (Legacy name kept for data preservation)
+        if "openai_files" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("openai_files")]
+            if "gender_category" not in columns:
+                print("MIGRATION: Adding 'gender_category' column to 'openai_files' table...")
+                try:
+                    conn.execute(text('ALTER TABLE openai_files ADD COLUMN gender_category VARCHAR DEFAULT "male"'))
+                    conn.commit()
+                    print("MIGRATION: Success!")
+                except Exception as e:
+                    print(f"MIGRATION ERROR: {e}")
+
+        # 2. Fix 'users' table
+        if "users" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("users")]
+            if "gender_preference" not in columns:
+                print("MIGRATION: Adding 'gender_preference' column to 'users' table...")
+                try:
+                    conn.execute(text('ALTER TABLE users ADD COLUMN gender_preference VARCHAR DEFAULT "male"'))
+                    conn.commit()
+                    print("MIGRATION: Success!")
+                except Exception as e:
+                    print(f"MIGRATION ERROR: {e}")
+
+        # 3. Fix 'messages' table
+        if "messages" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("messages")]
+            if "coach_type" not in columns:
+                print("MIGRATION: Adding 'coach_type' column to 'messages' table...")
+                try:
+                    conn.execute(text('ALTER TABLE messages ADD COLUMN coach_type VARCHAR DEFAULT "male"'))
+                    conn.commit()
+                    print("MIGRATION: Success!")
+                except Exception as e:
+                    print(f"MIGRATION ERROR: {e}")
+
+# Run migrations on startup
+run_migrations()
 
 # --- Models (Pydantic) ---
 class User(BaseModel):
@@ -111,9 +162,15 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
+class ChatMessage(BaseModel):
+    role: str  # 'user' or 'assistant'
+    content: str
+
 class ChatRequest(BaseModel):
     message: str
     gender_preference: Optional[str] = "male"  # For guest users
+    history: Optional[List[ChatMessage]] = []  # Conversation history for context
+
 
 class PlanUpdate(BaseModel):
     plan: str
@@ -193,14 +250,7 @@ async def get_current_active_user(current_user: UserDB = Depends(get_current_use
 # --- Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-        "https://*.vercel.app",
-        "https://dating-coach-ytos.onrender.com",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -279,36 +329,55 @@ async def chat(request: ChatRequest, current_user: UserDB = Depends(get_current_
     # Gender-specific system prompts
     male_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics. You understand masculine energy, frame control, attraction triggers, and how men can build genuine confidence and success with women.
 
+CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
 IMPORTANT INSTRUCTIONS:
-- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
-- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Keep responses concise and readable (150-200 words maximum).
+- Use natural paragraph breaks for readability.
+- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- Do NOT use bold text or headers.
 - Write in plain text, like you are texting a knowledgeable friend.
 - Be direct and insightful. Break down the situation and explain the dynamics at play.
-- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
+- NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
+- If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Address both the immediate situation and the underlying patterns.
 - Focus on: masculine frame, leadership, attraction psychology, maintaining boundaries, building value.
+- ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
 
+
     female_coach_prompt = """You are a warm, insightful relationship coach specializing in female psychology and modern dating. You understand feminine energy, emotional intelligence, relationship dynamics, and how women can navigate dating while maintaining their standards and authenticity.
 
+CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
 IMPORTANT INSTRUCTIONS:
-- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
-- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Keep responses concise and readable (150-200 words maximum).
+- Use natural paragraph breaks for readability.
+- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- Do NOT use bold text or headers.
 - Write in plain text, like you are texting a supportive friend.
 - Be direct yet empathetic. Break down the situation and explain the dynamics at play.
-- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
+- NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
+- If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Address both the immediate situation and the underlying patterns.
 - Focus on: recognizing red flags, maintaining standards, emotional intelligence, authentic connection, self-worth.
+- ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands female dating dynamics, not a robot giving one-liners."""
 
+
     # Select prompt based on user's gender preference
-    system_prompt = male_coach_prompt if current_user.gender_preference == "male" else female_coach_prompt
+    base_prompt = male_coach_prompt if current_user.gender_preference == "male" else female_coach_prompt
+    
+    # Add user's name to the prompt to prevent hallucinated names
+    user_name = current_user.full_name if current_user.full_name else "User"
+    user_name_instruction = f"\n\nIMPORTANT: The user's name is '{user_name}'. Address them by this name occasionally. Do NOT make up a name for the user."
+    system_prompt = base_prompt + user_name_instruction
 
     if not GEMINI_API_KEY:
         return {"response": "Gemini API key not configured. Please check .env file."}
@@ -319,53 +388,74 @@ Your goal is to sound like a real person who deeply understands female dating dy
             GeminiFileDB.gender_category == current_user.gender_preference
         ).all()
         
-        # Prepare content parts
-        content_parts = []
+        # Retrieve conversation history (last 20 messages for context)
+        history_messages = db.query(MessageDB).filter(
+            MessageDB.user_id == current_user.id,
+            MessageDB.coach_type == current_user.gender_preference
+        ).order_by(MessageDB.timestamp.desc()).limit(20).all()
         
-        # Add files to context
-        for file_record in stored_files:
-            try:
-                # Fetch file metadata from Gemini to ensure it exists and get the object
-                # In Gemini Python SDK, we can pass the file name (URI) or the file object.
-                # Passing the name string "files/..." works in some contexts, but getting the object is safer.
-                file_obj = genai.get_file(file_record.file_id)
-                content_parts.append(file_obj)
-            except Exception as e:
-                print(f"Error fetching file {file_record.file_id}: {e}")
-                # If file is missing in Gemini but in DB, we might want to ignore it
-                continue
+        # Reverse to get chronological order
+        history_messages = list(reversed(history_messages))
         
-        # Add user message
-        content_parts.append(request.message)
-        
-        # Initialize model
+        # Initialize model with system instruction
         model = genai.GenerativeModel(
             model_name="gemini-2.0-flash",
             system_instruction=system_prompt
         )
         
-        # Generate response
-        response = model.generate_content(content_parts)
+        # Start a chat session with history
+        chat_history = []
+        for msg in history_messages:
+            chat_history.append({
+                "role": "user" if msg.role == "user" else "model",
+                "parts": [msg.content]
+            })
+        
+        chat = model.start_chat(history=chat_history)
+        
+        # Prepare content parts for the current message
+        content_parts = []
+        
+        # Add files to context if this is the first message or if we want to always include them
+        if len(history_messages) == 0:  # First message, include PDFs for context
+            for file_record in stored_files:
+                try:
+                    file_obj = genai.get_file(file_record.file_id)
+                    content_parts.append(file_obj)
+                except Exception as e:
+                    print(f"Error fetching file {file_record.file_id}: {e}")
+                    continue
+        
+        # Add user message
+        content_parts.append(request.message)
+        
+        # Generate response with context
+        response = chat.send_message(content_parts)
         ai_response_text = response.text
         
-        # Save message to history
+        # Save user message
         user_msg = MessageDB(
             user_id=current_user.id,
             role="user",
             content=request.message,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow().isoformat(),
+            coach_type=current_user.gender_preference
         )
+        db.add(user_msg)
+        
+        # Save AI response
         ai_msg = MessageDB(
             user_id=current_user.id,
             role="assistant",
             content=ai_response_text,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow().isoformat(),
+            coach_type=current_user.gender_preference
         )
-        db.add(user_msg)
         db.add(ai_msg)
         db.commit()
         
         return {"response": ai_response_text}
+
         
     except Exception as e:
         import traceback
@@ -386,13 +476,15 @@ Your goal is to sound like a real person who deeply understands female dating dy
             user_id=current_user.id,
             role="user",
             content=request.message,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow().isoformat(),
+            coach_type=current_user.gender_preference
         )
         ai_msg = MessageDB(
             user_id=current_user.id,
             role="assistant",
             content=fallback_response,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow().isoformat(),
+            coach_type=current_user.gender_preference
         )
         db.add(user_msg)
         db.add(ai_msg)
@@ -401,8 +493,23 @@ Your goal is to sound like a real person who deeply understands female dating dy
         return {"response": fallback_response}
 
 @app.get("/chat/history")
-async def get_chat_history(current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
-    messages = db.query(MessageDB).filter(MessageDB.user_id == current_user.id).order_by(MessageDB.timestamp).all()
+async def get_chat_history(
+    coach_type: Optional[str] = None,
+    current_user: UserDB = Depends(get_current_active_user), 
+    db: Session = Depends(get_db)
+):
+    query = db.query(MessageDB).filter(MessageDB.user_id == current_user.id)
+    
+    # If coach_type is provided, filter by it. 
+    # If not, default to current preference OR return all (depending on desired behavior).
+    # Given the requirement "histories should not overlap", we should filter.
+    if coach_type:
+        query = query.filter(MessageDB.coach_type == coach_type)
+    else:
+        # Fallback to current preference if not specified
+        query = query.filter(MessageDB.coach_type == current_user.gender_preference)
+        
+    messages = query.order_by(MessageDB.timestamp).all()
     return {
         "messages": [
             {"role": m.role, "content": m.content, "timestamp": m.timestamp}
@@ -433,36 +540,54 @@ async def guest_chat(request: ChatRequest, db: Session = Depends(get_db)):
     # Gender-specific system prompts (same as authenticated users)
     male_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics. You understand masculine energy, frame control, attraction triggers, and how men can build genuine confidence and success with women.
 
+CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
 IMPORTANT INSTRUCTIONS:
-- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
-- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Keep responses concise and readable (150-200 words maximum).
+- Use natural paragraph breaks for readability.
+- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- Do NOT use bold text or headers.
 - Write in plain text, like you are texting a knowledgeable friend.
 - Be direct and insightful. Break down the situation and explain the dynamics at play.
-- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
+- NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
+- If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Address both the immediate situation and the underlying patterns.
 - Focus on: masculine frame, leadership, attraction psychology, maintaining boundaries, building value.
+- ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
 
+
     female_coach_prompt = """You are a warm, insightful relationship coach specializing in female psychology and modern dating. You understand feminine energy, emotional intelligence, relationship dynamics, and how women can navigate dating while maintaining their standards and authenticity.
 
+CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
 IMPORTANT INSTRUCTIONS:
-- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
-- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Keep responses concise and readable (150-200 words maximum).
+- Use natural paragraph breaks for readability.
+- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- Do NOT use bold text or headers.
 - Write in plain text, like you are texting a supportive friend.
 - Be direct yet empathetic. Break down the situation and explain the dynamics at play.
-- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
+- NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
+- If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Address both the immediate situation and the underlying patterns.
 - Focus on: recognizing red flags, maintaining standards, emotional intelligence, authentic connection, self-worth.
+- ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands female dating dynamics, not a robot giving one-liners."""
 
+
     # Select prompt based on gender preference
-    system_prompt = male_coach_prompt if gender_preference == "male" else female_coach_prompt
+    base_prompt = male_coach_prompt if gender_preference == "male" else female_coach_prompt
+
+    # Add instruction to NOT use a name for guests
+    name_instruction = "\n\nIMPORTANT: You are chatting with a guest user whose name is unknown. Do NOT address them by any personal name. Do NOT make up a name. You can address them directly without a name."
+    system_prompt = base_prompt + name_instruction
 
     if not GEMINI_API_KEY:
         return {"response": "Gemini API key not configured. Please check .env file."}
@@ -473,30 +598,44 @@ Your goal is to sound like a real person who deeply understands female dating dy
             GeminiFileDB.gender_category == gender_preference
         ).all()
         
-        # Prepare content parts
-        content_parts = []
-        
-        # Add files to context
-        for file_record in stored_files:
-            try:
-                file_obj = genai.get_file(file_record.file_id)
-                content_parts.append(file_obj)
-            except Exception as e:
-                print(f"Error fetching file {file_record.file_id}: {e}")
-                continue
-        
-        # Add user message
-        content_parts.append(request.message)
-        
-        # Initialize model
+        # Initialize model with system instruction
         model = genai.GenerativeModel(
             model_name="gemini-2.0-flash",
             system_instruction=system_prompt
         )
         
-        # Generate response
-        response = model.generate_content(content_parts)
+        # Build chat history from request
+        chat_history = []
+        if request.history:
+            for msg in request.history:
+                chat_history.append({
+                    "role": "user" if msg.role == "user" else "model",
+                    "parts": [msg.content]
+                })
+        
+        # Start chat session with history
+        chat = model.start_chat(history=chat_history)
+        
+        # Prepare content parts for current message
+        content_parts = []
+        
+        # Add files to context if this is the first message
+        if len(chat_history) == 0:  # First message, include PDFs for context
+            for file_record in stored_files:
+                try:
+                    file_obj = genai.get_file(file_record.file_id)
+                    content_parts.append(file_obj)
+                except Exception as e:
+                    print(f"Error fetching file {file_record.file_id}: {e}")
+                    continue
+        
+        # Add user message
+        content_parts.append(request.message)
+        
+        # Generate response with context
+        response = chat.send_message(content_parts)
         return {"response": response.text}
+
         
     except Exception as e:
         import traceback

@@ -37,19 +37,21 @@
                             <form id="signupForm">
                                 <div class="mb-3 form-group-mobile">
                                     <label for="name" class="form-label text-white-50 small">Full Name</label>
-                                    <input type="text" class="form-control bg-black text-white border-secondary rounded-0 signup-input"
+                                    <input type="text"
+                                        class="form-control bg-black text-white border-secondary rounded-0 signup-input"
                                         id="name" required>
                                 </div>
                                 <div class="mb-3 form-group-mobile">
                                     <label for="email" class="form-label text-white-50 small">Email Address</label>
-                                    <input type="email" class="form-control bg-black text-white border-secondary rounded-0 signup-input"
+                                    <input type="email"
+                                        class="form-control bg-black text-white border-secondary rounded-0 signup-input"
                                         id="email" required>
                                 </div>
                                 <div class="mb-4 form-group-mobile">
                                     <label for="password" class="form-label text-white-50 small">Password</label>
                                     <input type="password"
-                                        class="form-control bg-black text-white border-secondary rounded-0 signup-input" id="password"
-                                        required>
+                                        class="form-control bg-black text-white border-secondary rounded-0 signup-input"
+                                        id="password" required>
                                 </div>
                                 <button type="submit"
                                     class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase mb-3 signup-btn">Create
@@ -65,12 +67,14 @@
             </div>
 
             <!-- Right Side - Branding -->
-            <div class="col-lg-7 col-md-6 signup-branding-section d-none d-md-flex align-items-center justify-content-center">
+            <div
+                class="col-lg-7 col-md-6 signup-branding-section d-none d-md-flex align-items-center justify-content-center">
                 <div class="px-4 px-lg-5 text-center text-lg-start">
                     <div class="border-top border-secondary pt-4 mb-4"></div>
                     <h1 class="display-4 fw-bold text-white text-uppercase mb-4">Relationship for Humans</h1>
-                    <p class="lead text-white mb-5">Unapologetic truth for modern relationships. We do not sugarcoat reality. We master it.</p>
-            
+                    <p class="lead text-white mb-5">Unapologetic truth for modern relationships. We do not sugarcoat
+                        reality. We master it.</p>
+
                 </div>
             </div>
         </div>
@@ -87,7 +91,7 @@
             const password = document.getElementById('password').value;
 
             try {
-                const response = await fetch('https://dating-coach-ytos.onrender.com/register', {
+                const response = await fetch('http://127.0.0.1:8001/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -107,9 +111,9 @@
                 } else {
                     const errorData = await response.json();
                     const errorMessage = errorData.detail || 'Registration failed';
-                    
+
                     // Check if email/username already exists
-                    if (errorMessage.toLowerCase().includes('already registered') || 
+                    if (errorMessage.toLowerCase().includes('already registered') ||
                         errorMessage.toLowerCase().includes('username already') ||
                         errorMessage.toLowerCase().includes('email')) {
                         showToast('This email is already registered. Please use a different email or try logging in.', 'error');

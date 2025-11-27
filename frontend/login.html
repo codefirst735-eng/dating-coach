@@ -35,14 +35,15 @@
                         <form id="loginForm">
                             <div class="mb-3 form-group-mobile">
                                 <label for="email" class="form-label text-white-50 small">Email Address</label>
-                                <input type="email" class="form-control bg-black text-white border-secondary rounded-0 signup-input"
+                                <input type="email"
+                                    class="form-control bg-black text-white border-secondary rounded-0 signup-input"
                                     id="email" required>
                             </div>
                             <div class="mb-4 form-group-mobile">
                                 <label for="password" class="form-label text-white-50 small">Password</label>
                                 <input type="password"
-                                    class="form-control bg-black text-white border-secondary rounded-0 signup-input" id="password"
-                                    required>
+                                    class="form-control bg-black text-white border-secondary rounded-0 signup-input"
+                                    id="password" required>
                             </div>
                             <button type="submit"
                                 class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase mb-3 signup-btn">Login</button>
@@ -71,7 +72,7 @@
             formData.append('password', password);
 
             try {
-                const response = await fetch('https://dating-coach-ytos.onrender.com/token', {
+                const response = await fetch('http://127.0.0.1:8001/token', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
