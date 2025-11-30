@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RFH | Blog</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        .blog-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #6c757d;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .blog-card:hover {
+            border-color: #dc3545;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(220, 53, 69, 0.3);
+        }
+
+        .blog-image {
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .blog-meta {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .blog-excerpt {
+            color: #adb5bd;
+            line-height: 1.6;
+        }
+
+        .read-more-btn {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .read-more-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .no-blogs {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+
+        .blog-hero {
+            background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(0, 0, 0, 0.8));
+            padding: 4rem 0;
+            margin-bottom: 3rem;
+        }
+    </style>
+</head>
+
+<body class="bg-black text-light">
+
+    <!-- Header Component -->
+    <div id="header-placeholder"></div>
+
+    <!-- Hero Section -->
+    <section class="blog-hero">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-8">
+                    <h1 class="display-4 fw-bold text-danger mb-3">RFH Blog</h1>
+                    <p class="lead text-white-50 mb-4">
+                        Insights, strategies, and expert advice on relationships, dating, and personal development.
+                        Empowering you to build meaningful connections and achieve your relationship goals.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <!-- Search and Filter Bar -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-8">
+                <div class="card bg-dark border-secondary">
+                    <div class="card-body p-4">
+                        <!-- Search Bar -->
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <span class="input-group-text bg-danger border-danger text-white">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" class="form-control bg-dark text-white border-secondary" id="searchInput" placeholder="Search blogs...">
+                                <button class="btn btn-outline-danger" type="button" id="searchBtn">
+                                    <i class="bi bi-search me-1"></i>Search
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Category Filters -->
+                        <div id="categoryFilters" class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-outline-danger btn-sm active" data-category="all">
+                                <i class="bi bi-grid me-1"></i>All
+                            </button>
+                            <!-- Categories will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-danger" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-white-50 mt-3">Loading blogs...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="text-center py-5" style="display: none;">
+            <i class="bi bi-exclamation-triangle text-danger fs-1 mb-3"></i>
+            <h3 class="text-white">Unable to load blogs</h3>
+            <p class="text-white-50">Please try again later.</p>
+            <button class="btn btn-danger" onclick="loadBlogs()">Try Again</button>
+        </div>
+
+        <!-- Blogs Grid -->
+        <div id="blogsContainer" class="row g-4" style="display: none;">
+            <!-- Blogs will be loaded here -->
+        </div>
+
+        <!-- No Blogs State -->
+        <div id="noBlogsState" class="no-blogs" style="display: none;">
+            <i class="bi bi-journal-x fs-1 text-muted mb-3"></i>
+            <h3 class="text-white">No blogs available</h3>
+            <p>Check back soon for new content!</p>
+        </div>
+    </div>
+
+    <!-- Footer Component -->
+    <div id="footer-placeholder"></div>
+
+    <script src="js/components.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/config.js"></script>
+
+    <script>
+        let currentCategory = 'all';
+        let currentSearch = '';
+        let allCategories = [];
+
+        // Load blogs and categories when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCategories();
+            loadBlogs();
+
+            // Add event listeners
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+
+            document.getElementById('searchBtn').addEventListener('click', performSearch);
+        });
+
+        // Load available categories
+        function loadCategories() {
+            fetch(`${API_BASE_URL}/blogs/categories`)
+                .then(response => response.json())
+                .then(data => {
+                    allCategories = data.categories || [];
+                    displayCategories(allCategories);
+                })
+                .catch(error => {
+                    console.error('Error loading categories:', error);
+                });
+        }
+
+        // Display category filter buttons
+        function displayCategories(categories) {
+            const container = document.getElementById('categoryFilters');
+
+            // Clear existing category buttons (keep the "All" button)
+            const allButton = container.querySelector('[data-category="all"]');
+            container.innerHTML = '';
+            container.appendChild(allButton);
+
+            // Add category buttons
+            categories.forEach(category => {
+                const button = document.createElement('button');
+                button.className = 'btn btn-outline-danger btn-sm';
+                button.setAttribute('data-category', category);
+                button.innerHTML = `<i class="bi bi-tag me-1"></i>${category}`;
+                button.addEventListener('click', () => filterByCategory(category));
+                container.appendChild(button);
+            });
+        }
+
+        // Filter by category
+        function filterByCategory(category) {
+            currentCategory = category;
+
+            // Update active button state
+            document.querySelectorAll('#categoryFilters .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-category="${category}"]`).classList.add('active');
+
+            loadBlogs();
+        }
+
+        // Perform search
+        function performSearch() {
+            currentSearch = document.getElementById('searchInput').value.trim();
+            loadBlogs();
+        }
+
+        // Load blogs from API with filters
+        function loadBlogs() {
+            // Show loading state
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('blogsContainer').style.display = 'none';
+            document.getElementById('noBlogsState').style.display = 'none';
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (currentCategory && currentCategory !== 'all') {
+                params.append('category', currentCategory);
+            }
+            if (currentSearch) {
+                params.append('search', currentSearch);
+            }
+
+            const url = `${API_BASE_URL}/blogs${params.toString() ? '?' + params.toString() : ''}`;
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load blogs');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('loadingState').style.display = 'none';
+
+                    const blogs = data.blogs || [];
+                    if (blogs.length === 0) {
+                        document.getElementById('noBlogsState').style.display = 'block';
+                    } else {
+                        displayBlogs(blogs);
+                        document.getElementById('blogsContainer').style.display = 'flex';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading blogs:', error);
+                    document.getElementById('loadingState').style.display = 'none';
+                    document.getElementById('errorState').style.display = 'block';
+                });
+        }
+
+        // Display blogs in a grid layout
+        function displayBlogs(blogs) {
+            const container = document.getElementById('blogsContainer');
+            container.innerHTML = '';
+
+            blogs.forEach(blog => {
+                const publishedDate = new Date(blog.published_at || blog.created_at);
+                const formattedDate = publishedDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+
+                const imageUrl = blog.featured_image
+                    ? `${API_BASE_URL}/uploads/blogs/${blog.featured_image}`
+                    : 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=250&fit=crop'; // Default blog image
+
+                const blogCard = `
+                    <div class="col-lg-4 col-md-6">
+                        <div class="blog-card">
+                            <img src="${imageUrl}" alt="${blog.title}" class="blog-image w-100">
+                            <div class="card-body p-4">
+                                <div class="blog-meta mb-2">
+                                    <i class="bi bi-calendar-event me-1"></i>${formattedDate}
+                                    <span class="mx-2">•</span>
+                                    <i class="bi bi-person me-1"></i>${blog.author}
+                                </div>
+                                <h5 class="card-title mb-3" style="color: #FFB6C1;">${blog.title}</h5>
+                                <p class="blog-excerpt card-text mb-3">${blog.excerpt}</p>
+                                <a href="blog-detail.html?slug=${blog.slug}" class="btn read-more-btn text-white px-4 py-2">
+                                    Read More <i class="bi bi-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.insertAdjacentHTML('beforeend', blogCard);
+            });
+        }
+    </script>
+
+</body>
+
+</html>

@@ -26,7 +26,7 @@ load_dotenv(dotenv_path=env_path)
 # --- Configuration ---
 SECRET_KEY = "your-secret-key-change-this-in-production"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 SQLALCHEMY_DATABASE_URL = "sqlite:///./users.db"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
@@ -43,6 +43,16 @@ else:
     print("WARNING: GEMINI_API_KEY not set. AI features will be disabled.")
 
 app = FastAPI()
+
+# --- Static Files ---
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Create uploads directory if it doesn't exist
+os.makedirs("uploads/blogs", exist_ok=True)
+
+# Mount static files
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # --- Database Setup ---
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
@@ -84,6 +94,25 @@ class MessageDB(Base):
     role = Column(String) # user or assistant
     content = Column(String)
     timestamp = Column(String) # ISO date string
+    coach_type = Column(String, default="male") # 'male' or 'female'
+
+class BlogDB(Base):
+    __tablename__ = "blogs"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    slug = Column(String, unique=True, index=True)
+    content = Column(Text)
+    excerpt = Column(String)
+    featured_image = Column(String, nullable=True)  # Path to uploaded image
+    categories = Column(String, default="")  # Comma-separated categories
+    meta_title = Column(String)
+    meta_description = Column(String)
+    keywords = Column(String)  # Comma-separated keywords
+    author = Column(String, default="RFH Team")
+    published = Column(Boolean, default=False)
+    published_at = Column(String, nullable=True)
+    created_at = Column(String)
+    updated_at = Column(String)
 
 Base.metadata.create_all(bind=engine)
 
@@ -99,8 +128,6 @@ def run_migrations():
     
     with engine.connect() as conn:
         # 1. Fix 'openai_files' table (Legacy name kept for data preservation)
-        # We use 'openai_files' because the project started with OpenAI. 
-        # Renaming it now would lose existing data, so we keep the name but use it for Gemini.
         if "openai_files" in inspector.get_table_names():
             columns = [col["name"] for col in inspector.get_columns("openai_files")]
             if "gender_category" not in columns:
@@ -124,6 +151,57 @@ def run_migrations():
                 except Exception as e:
                     print(f"MIGRATION ERROR: {e}")
 
+        # 3. Fix 'messages' table
+        if "messages" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("messages")]
+            if "coach_type" not in columns:
+                print("MIGRATION: Adding 'coach_type' column to 'messages' table...")
+                try:
+                    conn.execute(text('ALTER TABLE messages ADD COLUMN coach_type VARCHAR DEFAULT "male"'))
+                    conn.commit()
+                    print("MIGRATION: Success!")
+                except Exception as e:
+                    print(f"MIGRATION ERROR: {e}")
+
+        # 4. Create 'blogs' table if it doesn't exist
+        if "blogs" not in inspector.get_table_names():
+            print("MIGRATION: Creating 'blogs' table...")
+            try:
+                conn.execute(text('''
+                    CREATE TABLE blogs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title VARCHAR NOT NULL,
+                        slug VARCHAR UNIQUE NOT NULL,
+                        content TEXT NOT NULL,
+                        excerpt VARCHAR NOT NULL,
+                        featured_image VARCHAR,
+                        categories VARCHAR DEFAULT "",
+                        meta_title VARCHAR NOT NULL,
+                        meta_description VARCHAR NOT NULL,
+                        keywords VARCHAR NOT NULL,
+                        author VARCHAR DEFAULT "RFH Team",
+                        published BOOLEAN DEFAULT 0,
+                        published_at VARCHAR,
+                        created_at VARCHAR NOT NULL,
+                        updated_at VARCHAR NOT NULL
+                    )
+                '''))
+                conn.commit()
+                print("MIGRATION: Blogs table created successfully!")
+            except Exception as e:
+                print(f"MIGRATION ERROR creating blogs table: {e}")
+
+        # 5. Add categories column to blogs table if it doesn't exist
+        if "blogs" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("blogs")]
+            if "categories" not in columns:
+                print("MIGRATION: Adding 'categories' column to 'blogs' table...")
+                try:
+                    conn.execute(text('ALTER TABLE blogs ADD COLUMN categories VARCHAR DEFAULT ""'))
+                    conn.commit()
+                    print("MIGRATION: Categories column added successfully!")
+                except Exception as e:
+                    print(f"MIGRATION ERROR adding categories column: {e}")
 # Run migrations on startup
 run_migrations()
 
@@ -151,9 +229,15 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
+class ChatMessage(BaseModel):
+    role: str  # 'user' or 'assistant'
+    content: str
+
 class ChatRequest(BaseModel):
     message: str
     gender_preference: Optional[str] = "male"  # For guest users
+    history: Optional[List[ChatMessage]] = []  # Conversation history for context
+
 
 class PlanUpdate(BaseModel):
     plan: str
@@ -170,6 +254,57 @@ class FileUploadResponse(BaseModel):
 
 class FileListResponse(BaseModel):
     files: List[dict]
+
+class BlogBase(BaseModel):
+    title: str
+    slug: str
+    content: str
+    excerpt: str
+    categories: str = ""
+    meta_title: str
+    meta_description: str
+    keywords: str
+    author: Optional[str] = "RFH Team"
+    published: bool = False
+
+class BlogCreate(BlogBase):
+    pass
+
+class BlogUpdate(BaseModel):
+    title: Optional[str] = None
+    slug: Optional[str] = None
+    content: Optional[str] = None
+    excerpt: Optional[str] = None
+    featured_image: Optional[str] = None
+    categories: Optional[str] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
+    keywords: Optional[str] = None
+    author: Optional[str] = None
+    published: Optional[bool] = None
+
+class Blog(BaseModel):
+    id: int
+    title: str
+    slug: str
+    content: str
+    excerpt: str
+    featured_image: Optional[str] = None
+    categories: str = ""
+    meta_title: str
+    meta_description: str
+    keywords: str
+    author: str
+    published: bool
+    published_at: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+class BlogList(BaseModel):
+    blogs: List[Blog]
 
 # --- Helper Functions ---
 def get_db():
@@ -233,14 +368,7 @@ async def get_current_active_user(current_user: UserDB = Depends(get_current_use
 # --- Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-        "https://*.vercel.app",
-        "https://dating-coach-ytos.onrender.com",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -319,36 +447,55 @@ async def chat(request: ChatRequest, current_user: UserDB = Depends(get_current_
     # Gender-specific system prompts
     male_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics. You understand masculine energy, frame control, attraction triggers, and how men can build genuine confidence and success with women.
 
+CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
 IMPORTANT INSTRUCTIONS:
-- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
-- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Keep responses concise and readable (150-200 words maximum).
+- Use natural paragraph breaks for readability.
+- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- Do NOT use bold text or headers.
 - Write in plain text, like you are texting a knowledgeable friend.
 - Be direct and insightful. Break down the situation and explain the dynamics at play.
-- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- Refer PDFs uploaded but NEVER mention any book names, PDF names, authors, or specific sources but take your knowledge from them.
+- NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
+- If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Address both the immediate situation and the underlying patterns.
 - Focus on: masculine frame, leadership, attraction psychology, maintaining boundaries, building value.
+- ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
 
+
     female_coach_prompt = """You are a warm, insightful relationship coach specializing in female psychology and modern dating. You understand feminine energy, emotional intelligence, relationship dynamics, and how women can navigate dating while maintaining their standards and authenticity.
 
+CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
 IMPORTANT INSTRUCTIONS:
-- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
-- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Keep responses concise and readable (150-200 words maximum).
+- Use natural paragraph breaks for readability.
+- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- Do NOT use bold text or headers.
 - Write in plain text, like you are texting a supportive friend.
 - Be direct yet empathetic. Break down the situation and explain the dynamics at play.
-- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
+- NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
+- If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Address both the immediate situation and the underlying patterns.
 - Focus on: recognizing red flags, maintaining standards, emotional intelligence, authentic connection, self-worth.
+- ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands female dating dynamics, not a robot giving one-liners."""
 
+
     # Select prompt based on user's gender preference
-    system_prompt = male_coach_prompt if current_user.gender_preference == "male" else female_coach_prompt
+    base_prompt = male_coach_prompt if current_user.gender_preference == "male" else female_coach_prompt
+    
+    # Add user's name to the prompt to prevent hallucinated names
+    user_name = current_user.full_name if current_user.full_name else "User"
+    user_name_instruction = f"\n\nIMPORTANT: The user's name is '{user_name}'. Address them by this name occasionally. Do NOT make up a name for the user."
+    system_prompt = base_prompt + user_name_instruction
 
     if not GEMINI_API_KEY:
         return {"response": "Gemini API key not configured. Please check .env file."}
@@ -359,53 +506,74 @@ Your goal is to sound like a real person who deeply understands female dating dy
             GeminiFileDB.gender_category == current_user.gender_preference
         ).all()
         
-        # Prepare content parts
-        content_parts = []
+        # Retrieve conversation history (last 20 messages for context)
+        history_messages = db.query(MessageDB).filter(
+            MessageDB.user_id == current_user.id,
+            MessageDB.coach_type == current_user.gender_preference
+        ).order_by(MessageDB.timestamp.desc()).limit(20).all()
         
-        # Add files to context
-        for file_record in stored_files:
-            try:
-                # Fetch file metadata from Gemini to ensure it exists and get the object
-                # In Gemini Python SDK, we can pass the file name (URI) or the file object.
-                # Passing the name string "files/..." works in some contexts, but getting the object is safer.
-                file_obj = genai.get_file(file_record.file_id)
-                content_parts.append(file_obj)
-            except Exception as e:
-                print(f"Error fetching file {file_record.file_id}: {e}")
-                # If file is missing in Gemini but in DB, we might want to ignore it
-                continue
+        # Reverse to get chronological order
+        history_messages = list(reversed(history_messages))
         
-        # Add user message
-        content_parts.append(request.message)
-        
-        # Initialize model
+        # Initialize model with system instruction
         model = genai.GenerativeModel(
             model_name="gemini-2.0-flash",
             system_instruction=system_prompt
         )
         
-        # Generate response
-        response = model.generate_content(content_parts)
+        # Start a chat session with history
+        chat_history = []
+        for msg in history_messages:
+            chat_history.append({
+                "role": "user" if msg.role == "user" else "model",
+                "parts": [msg.content]
+            })
+        
+        chat = model.start_chat(history=chat_history)
+        
+        # Prepare content parts for the current message
+        content_parts = []
+        
+        # Add files to context if this is the first message or if we want to always include them
+        if len(history_messages) == 0:  # First message, include PDFs for context
+            for file_record in stored_files:
+                try:
+                    file_obj = genai.get_file(file_record.file_id)
+                    content_parts.append(file_obj)
+                except Exception as e:
+                    print(f"Error fetching file {file_record.file_id}: {e}")
+                    continue
+        
+        # Add user message
+        content_parts.append(request.message)
+        
+        # Generate response with context
+        response = chat.send_message(content_parts)
         ai_response_text = response.text
         
-        # Save message to history
+        # Save user message
         user_msg = MessageDB(
             user_id=current_user.id,
             role="user",
             content=request.message,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow().isoformat(),
+            coach_type=current_user.gender_preference
         )
+        db.add(user_msg)
+        
+        # Save AI response
         ai_msg = MessageDB(
             user_id=current_user.id,
             role="assistant",
             content=ai_response_text,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow().isoformat(),
+            coach_type=current_user.gender_preference
         )
-        db.add(user_msg)
         db.add(ai_msg)
         db.commit()
         
         return {"response": ai_response_text}
+
         
     except Exception as e:
         import traceback
@@ -426,13 +594,15 @@ Your goal is to sound like a real person who deeply understands female dating dy
             user_id=current_user.id,
             role="user",
             content=request.message,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow().isoformat(),
+            coach_type=current_user.gender_preference
         )
         ai_msg = MessageDB(
             user_id=current_user.id,
             role="assistant",
             content=fallback_response,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow().isoformat(),
+            coach_type=current_user.gender_preference
         )
         db.add(user_msg)
         db.add(ai_msg)
@@ -441,8 +611,23 @@ Your goal is to sound like a real person who deeply understands female dating dy
         return {"response": fallback_response}
 
 @app.get("/chat/history")
-async def get_chat_history(current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
-    messages = db.query(MessageDB).filter(MessageDB.user_id == current_user.id).order_by(MessageDB.timestamp).all()
+async def get_chat_history(
+    coach_type: Optional[str] = None,
+    current_user: UserDB = Depends(get_current_active_user), 
+    db: Session = Depends(get_db)
+):
+    query = db.query(MessageDB).filter(MessageDB.user_id == current_user.id)
+    
+    # If coach_type is provided, filter by it. 
+    # If not, default to current preference OR return all (depending on desired behavior).
+    # Given the requirement "histories should not overlap", we should filter.
+    if coach_type:
+        query = query.filter(MessageDB.coach_type == coach_type)
+    else:
+        # Fallback to current preference if not specified
+        query = query.filter(MessageDB.coach_type == current_user.gender_preference)
+        
+    messages = query.order_by(MessageDB.timestamp).all()
     return {
         "messages": [
             {"role": m.role, "content": m.content, "timestamp": m.timestamp}
@@ -473,36 +658,54 @@ async def guest_chat(request: ChatRequest, db: Session = Depends(get_db)):
     # Gender-specific system prompts (same as authenticated users)
     male_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics. You understand masculine energy, frame control, attraction triggers, and how men can build genuine confidence and success with women.
 
+CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
 IMPORTANT INSTRUCTIONS:
-- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
-- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Keep responses concise and readable (150-200 words maximum).
+- Use natural paragraph breaks for readability.
+- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- Do NOT use bold text or headers.
 - Write in plain text, like you are texting a knowledgeable friend.
 - Be direct and insightful. Break down the situation and explain the dynamics at play.
-- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
+- NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
+- If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Address both the immediate situation and the underlying patterns.
 - Focus on: masculine frame, leadership, attraction psychology, maintaining boundaries, building value.
+- ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
 
+
     female_coach_prompt = """You are a warm, insightful relationship coach specializing in female psychology and modern dating. You understand feminine energy, emotional intelligence, relationship dynamics, and how women can navigate dating while maintaining their standards and authenticity.
 
+CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
 IMPORTANT INSTRUCTIONS:
-- Provide thoughtful, detailed responses (2-3 paragraphs minimum).
-- Do NOT use Markdown formatting (no bold, no lists, no headers).
+- Keep responses concise and readable (150-200 words maximum).
+- Use natural paragraph breaks for readability.
+- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- Do NOT use bold text or headers.
 - Write in plain text, like you are texting a supportive friend.
 - Be direct yet empathetic. Break down the situation and explain the dynamics at play.
-- Use the uploaded PDFs as knowledge sources but don't explicitly mention them unless asked.
+- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
+- NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
+- If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Address both the immediate situation and the underlying patterns.
 - Focus on: recognizing red flags, maintaining standards, emotional intelligence, authentic connection, self-worth.
+- ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands female dating dynamics, not a robot giving one-liners."""
 
+
     # Select prompt based on gender preference
-    system_prompt = male_coach_prompt if gender_preference == "male" else female_coach_prompt
+    base_prompt = male_coach_prompt if gender_preference == "male" else female_coach_prompt
+
+    # Add instruction to NOT use a name for guests
+    name_instruction = "\n\nIMPORTANT: You are chatting with a guest user whose name is unknown. Do NOT address them by any personal name. Do NOT make up a name. You can address them directly without a name."
+    system_prompt = base_prompt + name_instruction
 
     if not GEMINI_API_KEY:
         return {"response": "Gemini API key not configured. Please check .env file."}
@@ -513,30 +716,44 @@ Your goal is to sound like a real person who deeply understands female dating dy
             GeminiFileDB.gender_category == gender_preference
         ).all()
         
-        # Prepare content parts
-        content_parts = []
-        
-        # Add files to context
-        for file_record in stored_files:
-            try:
-                file_obj = genai.get_file(file_record.file_id)
-                content_parts.append(file_obj)
-            except Exception as e:
-                print(f"Error fetching file {file_record.file_id}: {e}")
-                continue
-        
-        # Add user message
-        content_parts.append(request.message)
-        
-        # Initialize model
+        # Initialize model with system instruction
         model = genai.GenerativeModel(
             model_name="gemini-2.0-flash",
             system_instruction=system_prompt
         )
         
-        # Generate response
-        response = model.generate_content(content_parts)
+        # Build chat history from request
+        chat_history = []
+        if request.history:
+            for msg in request.history:
+                chat_history.append({
+                    "role": "user" if msg.role == "user" else "model",
+                    "parts": [msg.content]
+                })
+        
+        # Start chat session with history
+        chat = model.start_chat(history=chat_history)
+        
+        # Prepare content parts for current message
+        content_parts = []
+        
+        # Add files to context if this is the first message
+        if len(chat_history) == 0:  # First message, include PDFs for context
+            for file_record in stored_files:
+                try:
+                    file_obj = genai.get_file(file_record.file_id)
+                    content_parts.append(file_obj)
+                except Exception as e:
+                    print(f"Error fetching file {file_record.file_id}: {e}")
+                    continue
+        
+        # Add user message
+        content_parts.append(request.message)
+        
+        # Generate response with context
+        response = chat.send_message(content_parts)
         return {"response": response.text}
+
         
     except Exception as e:
         import traceback
@@ -765,3 +982,152 @@ async def replace_all_files(files: List[UploadFile] = File(...), db: Session = D
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error replacing files: {str(e)}")
+
+# --- Blog Management ---
+
+@app.get("/blogs", response_model=BlogList)
+async def get_blogs(
+    category: str = None,
+    search: str = None,
+    db: Session = Depends(get_db)
+):
+    """Get all published blogs for public viewing with optional filtering."""
+    query = db.query(BlogDB).filter(BlogDB.published == True)
+
+    # Filter by category if provided
+    if category and category != "all":
+        query = query.filter(BlogDB.categories.contains(category))
+
+    # Filter by search term if provided
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            (BlogDB.title.ilike(search_term)) |
+            (BlogDB.content.ilike(search_term)) |
+            (BlogDB.excerpt.ilike(search_term))
+        )
+
+    blogs = query.order_by(BlogDB.published_at.desc()).all()
+    return {"blogs": blogs}
+
+@app.get("/blogs/categories")
+async def get_blog_categories(db: Session = Depends(get_db)):
+    """Get all unique categories from published blogs."""
+    blogs = db.query(BlogDB).filter(BlogDB.published == True).all()
+
+    categories = set()
+    for blog in blogs:
+        if blog.categories:
+            blog_categories = [cat.strip() for cat in blog.categories.split(',') if cat.strip()]
+            categories.update(blog_categories)
+
+    return {"categories": sorted(list(categories))}
+
+@app.get("/blogs/{slug}")
+async def get_blog(slug: str, db: Session = Depends(get_db)):
+    """Get a single blog by slug."""
+    blog = db.query(BlogDB).filter(BlogDB.slug == slug, BlogDB.published == True).first()
+    if not blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    return blog
+
+@app.post("/admin/blogs", response_model=Blog)
+async def create_blog(blog: BlogCreate, db: Session = Depends(get_db)):
+    """Create a new blog (admin only)."""
+    # Check if slug already exists
+    existing_blog = db.query(BlogDB).filter(BlogDB.slug == blog.slug).first()
+    if existing_blog:
+        raise HTTPException(status_code=400, detail="Blog with this slug already exists")
+
+    now = datetime.utcnow().isoformat()
+    db_blog = BlogDB(
+        **blog.dict(),
+        created_at=now,
+        updated_at=now,
+        published_at=now if blog.published else None
+    )
+    db.add(db_blog)
+    db.commit()
+    db.refresh(db_blog)
+    return db_blog
+
+@app.put("/admin/blogs/{blog_id}", response_model=Blog)
+async def update_blog(blog_id: int, blog_update: BlogUpdate, db: Session = Depends(get_db)):
+    """Update a blog (admin only)."""
+    db_blog = db.query(BlogDB).filter(BlogDB.id == blog_id).first()
+    if not db_blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+
+    # Check if new slug conflicts with another blog
+    if blog_update.slug != db_blog.slug:
+        existing_blog = db.query(BlogDB).filter(BlogDB.slug == blog_update.slug, BlogDB.id != blog_id).first()
+        if existing_blog:
+            raise HTTPException(status_code=400, detail="Blog with this slug already exists")
+
+    update_data = blog_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        if value is not None:
+            setattr(db_blog, field, value)
+
+    db_blog.updated_at = datetime.utcnow().isoformat()
+    if blog_update.published and not db_blog.published_at:
+        db_blog.published_at = datetime.utcnow().isoformat()
+
+    db.commit()
+    db.refresh(db_blog)
+    return db_blog
+
+@app.delete("/admin/blogs/{blog_id}")
+async def delete_blog(blog_id: int, db: Session = Depends(get_db)):
+    """Delete a blog (admin only)."""
+    db_blog = db.query(BlogDB).filter(BlogDB.id == blog_id).first()
+    if not db_blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+
+    # Delete associated image file if it exists
+    if db_blog.featured_image:
+        try:
+            image_path = os.path.join("uploads", "blogs", db_blog.featured_image)
+            if os.path.exists(image_path):
+                os.remove(image_path)
+        except Exception as e:
+            print(f"Warning: Could not delete blog image: {e}")
+
+    db.delete(db_blog)
+    db.commit()
+    return {"message": "Blog deleted successfully"}
+
+@app.get("/admin/blogs", response_model=BlogList)
+async def get_all_blogs(db: Session = Depends(get_db)):
+    """Get all blogs including unpublished ones (admin only)."""
+    blogs = db.query(BlogDB).order_by(BlogDB.created_at.desc()).all()
+    return {"blogs": blogs}
+
+@app.post("/admin/upload-blog-image")
+async def upload_blog_image(file: UploadFile = File(...)):
+    """Upload an image for blog posts."""
+    if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+        raise HTTPException(status_code=400, detail="Only image files are allowed")
+
+    # Create uploads/blogs directory if it doesn't exist
+    upload_dir = os.path.join("uploads", "blogs")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Generate unique filename
+    file_extension = os.path.splitext(file.filename)[1]
+    unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000, 9999)}{file_extension}"
+    file_path = os.path.join(upload_dir, unique_filename)
+
+    # Save the file
+    try:
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
+
+    return {
+        "filename": unique_filename,
+        "url": f"/uploads/blogs/{unique_filename}",
+        "message": "Image uploaded successfully"
+    }
