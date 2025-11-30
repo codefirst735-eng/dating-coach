@@ -27,7 +27,7 @@ load_dotenv(dotenv_path=env_path)
 SECRET_KEY = "your-secret-key-change-this-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440
-SQLALCHEMY_DATABASE_URL = "sqlite:///./users.db"
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./users.db")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Initialize Gemini
@@ -204,6 +204,59 @@ def run_migrations():
                     print(f"MIGRATION ERROR adding categories column: {e}")
 # Run migrations on startup
 run_migrations()
+
+# Initialize database with default data if empty
+def initialize_database():
+    db = SessionLocal()
+    try:
+        # Check if we have any users
+        user_count = db.query(UserDB).count()
+        if user_count == 0:
+            print("INITIALIZATION: Creating default test user...")
+            # Create a test user
+            hashed_password = get_password_hash("test123")
+            test_user = UserDB(
+                username="testuser",
+                email="test@example.com",
+                hashed_password=hashed_password,
+                full_name="Test User",
+                disabled=False
+            )
+            db.add(test_user)
+            db.commit()
+            print("INITIALIZATION: Test user created (username: testuser, password: test123)")
+
+        # Check if we have any blogs
+        blog_count = db.query(BlogDB).count()
+        if blog_count == 0:
+            print("INITIALIZATION: Creating sample blog...")
+            sample_blog = BlogDB(
+                title="Welcome to RFH Dating Coach",
+                slug="welcome-to-rfh-dating-coach",
+                content="<p>Welcome to Relationship for Humans! This AI-powered dating coach is designed to help you navigate the complex world of modern relationships.</p><p>Our platform uses advanced AI technology to provide personalized advice, analyze your screenshots, and offer insights into relationship dynamics.</p><p>Get started by exploring our features and taking the first step towards better relationships!</p>",
+                excerpt="Welcome to Relationship for Humans! Discover how our AI-powered dating coach can help you navigate modern relationships.",
+                featured_image="",
+                categories="Getting Started,Welcome",
+                meta_title="Welcome to RFH Dating Coach",
+                meta_description="AI-powered dating coach to help you navigate modern relationships with personalized advice and insights.",
+                keywords="dating coach, relationships, AI, advice",
+                author="RFH Team",
+                published=True,
+                published_at=datetime.utcnow().isoformat(),
+                created_at=datetime.utcnow().isoformat(),
+                updated_at=datetime.utcnow().isoformat()
+            )
+            db.add(sample_blog)
+            db.commit()
+            print("INITIALIZATION: Sample blog created")
+
+    except Exception as e:
+        print(f"INITIALIZATION ERROR: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+initialize_database()
 
 # --- Models (Pydantic) ---
 class User(BaseModel):
