@@ -62,17 +62,22 @@ This application consists of two parts:
    git push
    ```
 
-3. **Deploy on Cloudflare Pages**
-   - Go to https://dash.cloudflare.com
-   - Navigate to "Workers & Pages" → "Pages"
-   - Click "Create a project"
-   - Connect to GitHub and select your repository
-   - Configure:
-     - **Project name**: `rfh-app` (or your choice)
-     - **Production branch**: `main`
-     - **Build command**: Leave empty
-     - **Build output directory**: `frontend`
    - Click "Save and Deploy"
+
+### Option B: Deploy Frontend (Vercel)
+
+1. **Update API URL in frontend**
+   - Ensure `frontend/js/config.js` points to your Render URL
+
+2. **Deploy on Vercel**
+   - Go to https://vercel.com
+   - Click "Add New..." → "Project"
+   - Import your GitHub repository
+   - Configure:
+     - **Framework Preset**: Other
+     - **Root Directory**: `frontend` (Click Edit to change)
+   - Click "Deploy"
+
 
 4. **Configure CORS on Backend**
    After deployment, note your Cloudflare Pages URL (e.g., `https://rfh-app.pages.dev`)
