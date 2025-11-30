@@ -31,6 +31,25 @@
         if (window.initNavbar) {
             window.initNavbar();
         }
+
+        // Manually initialize Bootstrap Collapse for the mobile navbar
+        // This is necessary because the navbar is added dynamically after Bootstrap has loaded
+        const navbarCollapse = document.querySelector('.navbar-collapse');
+        const navbarToggler = document.querySelector('.navbar-toggler');
+
+        if (navbarCollapse && typeof bootstrap !== 'undefined') {
+            const bsCollapse = new bootstrap.Collapse(navbarCollapse, {
+                toggle: false
+            });
+
+            // Add click listener to toggler if it exists
+            if (navbarToggler) {
+                navbarToggler.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    bsCollapse.toggle();
+                });
+            }
+        }
     }
 
     // Wait for DOM to be ready
