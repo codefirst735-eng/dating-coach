@@ -130,6 +130,7 @@
     <!-- Footer Component -->
     <div id="footer-placeholder"></div>
 
+    <script src="js/config.js"></script>
     <script src="js/components.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/toast.js"></script>
@@ -143,7 +144,7 @@
         // Fetch User Data
         async function fetchUserProfile() {
             try {
-                const response = await fetch('http://127.0.0.1:8001/users/me', {
+                const response = await fetch(`${API_BASE_URL}/users/me`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -227,7 +228,7 @@
                 const email = document.getElementById('editEmail').value;
 
                 try {
-                    const response = await fetch('http://127.0.0.1:8001/update-profile', {
+                    const response = await fetch(`${API_BASE_URL}/update-profile`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
