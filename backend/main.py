@@ -44,6 +44,16 @@ else:
 
 app = FastAPI()
 
+# --- Static Files ---
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Create uploads directory if it doesn't exist
+os.makedirs("uploads/blogs", exist_ok=True)
+
+# Mount static files
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 # --- Database Setup ---
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -85,6 +95,24 @@ class MessageDB(Base):
     content = Column(String)
     timestamp = Column(String) # ISO date string
     coach_type = Column(String, default="male") # 'male' or 'female'
+
+class BlogDB(Base):
+    __tablename__ = "blogs"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    slug = Column(String, unique=True, index=True)
+    content = Column(Text)
+    excerpt = Column(String)
+    featured_image = Column(String, nullable=True)  # Path to uploaded image
+    categories = Column(String, default="")  # Comma-separated categories
+    meta_title = Column(String)
+    meta_description = Column(String)
+    keywords = Column(String)  # Comma-separated keywords
+    author = Column(String, default="RFH Team")
+    published = Column(Boolean, default=False)
+    published_at = Column(String, nullable=True)
+    created_at = Column(String)
+    updated_at = Column(String)
 
 Base.metadata.create_all(bind=engine)
 
@@ -134,6 +162,46 @@ def run_migrations():
                     print("MIGRATION: Success!")
                 except Exception as e:
                     print(f"MIGRATION ERROR: {e}")
+
+        # 4. Create 'blogs' table if it doesn't exist
+        if "blogs" not in inspector.get_table_names():
+            print("MIGRATION: Creating 'blogs' table...")
+            try:
+                conn.execute(text('''
+                    CREATE TABLE blogs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title VARCHAR NOT NULL,
+                        slug VARCHAR UNIQUE NOT NULL,
+                        content TEXT NOT NULL,
+                        excerpt VARCHAR NOT NULL,
+                        featured_image VARCHAR,
+                        categories VARCHAR DEFAULT "",
+                        meta_title VARCHAR NOT NULL,
+                        meta_description VARCHAR NOT NULL,
+                        keywords VARCHAR NOT NULL,
+                        author VARCHAR DEFAULT "RFH Team",
+                        published BOOLEAN DEFAULT 0,
+                        published_at VARCHAR,
+                        created_at VARCHAR NOT NULL,
+                        updated_at VARCHAR NOT NULL
+                    )
+                '''))
+                conn.commit()
+                print("MIGRATION: Blogs table created successfully!")
+            except Exception as e:
+                print(f"MIGRATION ERROR creating blogs table: {e}")
+
+        # 5. Add categories column to blogs table if it doesn't exist
+        if "blogs" in inspector.get_table_names():
+            columns = [col["name"] for col in inspector.get_columns("blogs")]
+            if "categories" not in columns:
+                print("MIGRATION: Adding 'categories' column to 'blogs' table...")
+                try:
+                    conn.execute(text('ALTER TABLE blogs ADD COLUMN categories VARCHAR DEFAULT ""'))
+                    conn.commit()
+                    print("MIGRATION: Categories column added successfully!")
+                except Exception as e:
+                    print(f"MIGRATION ERROR adding categories column: {e}")
 
 # Run migrations on startup
 run_migrations()
@@ -187,6 +255,57 @@ class FileUploadResponse(BaseModel):
 
 class FileListResponse(BaseModel):
     files: List[dict]
+
+class BlogBase(BaseModel):
+    title: str
+    slug: str
+    content: str
+    excerpt: str
+    categories: str = ""
+    meta_title: str
+    meta_description: str
+    keywords: str
+    author: Optional[str] = "RFH Team"
+    published: bool = False
+
+class BlogCreate(BlogBase):
+    pass
+
+class BlogUpdate(BaseModel):
+    title: Optional[str] = None
+    slug: Optional[str] = None
+    content: Optional[str] = None
+    excerpt: Optional[str] = None
+    featured_image: Optional[str] = None
+    categories: Optional[str] = None
+    meta_title: Optional[str] = None
+    meta_description: Optional[str] = None
+    keywords: Optional[str] = None
+    author: Optional[str] = None
+    published: Optional[bool] = None
+
+class Blog(BaseModel):
+    id: int
+    title: str
+    slug: str
+    content: str
+    excerpt: str
+    featured_image: Optional[str] = None
+    categories: str = ""
+    meta_title: str
+    meta_description: str
+    keywords: str
+    author: str
+    published: bool
+    published_at: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+class BlogList(BaseModel):
+    blogs: List[Blog]
 
 # --- Helper Functions ---
 def get_db():
@@ -338,7 +457,7 @@ IMPORTANT INSTRUCTIONS:
 - Do NOT use bold text or headers.
 - Write in plain text, like you are texting a knowledgeable friend.
 - Be direct and insightful. Break down the situation and explain the dynamics at play.
-- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
+- Refer PDFs uploaded but NEVER mention any book names, PDF names, authors, or specific sources but take your knowledge from them.
 - NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
 - If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
@@ -864,3 +983,152 @@ async def replace_all_files(files: List[UploadFile] = File(...), db: Session = D
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error replacing files: {str(e)}")
+
+# --- Blog Management ---
+
+@app.get("/blogs", response_model=BlogList)
+async def get_blogs(
+    category: str = None,
+    search: str = None,
+    db: Session = Depends(get_db)
+):
+    """Get all published blogs for public viewing with optional filtering."""
+    query = db.query(BlogDB).filter(BlogDB.published == True)
+
+    # Filter by category if provided
+    if category and category != "all":
+        query = query.filter(BlogDB.categories.contains(category))
+
+    # Filter by search term if provided
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            (BlogDB.title.ilike(search_term)) |
+            (BlogDB.content.ilike(search_term)) |
+            (BlogDB.excerpt.ilike(search_term))
+        )
+
+    blogs = query.order_by(BlogDB.published_at.desc()).all()
+    return {"blogs": blogs}
+
+@app.get("/blogs/categories")
+async def get_blog_categories(db: Session = Depends(get_db)):
+    """Get all unique categories from published blogs."""
+    blogs = db.query(BlogDB).filter(BlogDB.published == True).all()
+
+    categories = set()
+    for blog in blogs:
+        if blog.categories:
+            blog_categories = [cat.strip() for cat in blog.categories.split(',') if cat.strip()]
+            categories.update(blog_categories)
+
+    return {"categories": sorted(list(categories))}
+
+@app.get("/blogs/{slug}")
+async def get_blog(slug: str, db: Session = Depends(get_db)):
+    """Get a single blog by slug."""
+    blog = db.query(BlogDB).filter(BlogDB.slug == slug, BlogDB.published == True).first()
+    if not blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    return blog
+
+@app.post("/admin/blogs", response_model=Blog)
+async def create_blog(blog: BlogCreate, db: Session = Depends(get_db)):
+    """Create a new blog (admin only)."""
+    # Check if slug already exists
+    existing_blog = db.query(BlogDB).filter(BlogDB.slug == blog.slug).first()
+    if existing_blog:
+        raise HTTPException(status_code=400, detail="Blog with this slug already exists")
+
+    now = datetime.utcnow().isoformat()
+    db_blog = BlogDB(
+        **blog.dict(),
+        created_at=now,
+        updated_at=now,
+        published_at=now if blog.published else None
+    )
+    db.add(db_blog)
+    db.commit()
+    db.refresh(db_blog)
+    return db_blog
+
+@app.put("/admin/blogs/{blog_id}", response_model=Blog)
+async def update_blog(blog_id: int, blog_update: BlogUpdate, db: Session = Depends(get_db)):
+    """Update a blog (admin only)."""
+    db_blog = db.query(BlogDB).filter(BlogDB.id == blog_id).first()
+    if not db_blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+
+    # Check if new slug conflicts with another blog
+    if blog_update.slug != db_blog.slug:
+        existing_blog = db.query(BlogDB).filter(BlogDB.slug == blog_update.slug, BlogDB.id != blog_id).first()
+        if existing_blog:
+            raise HTTPException(status_code=400, detail="Blog with this slug already exists")
+
+    update_data = blog_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        if value is not None:
+            setattr(db_blog, field, value)
+
+    db_blog.updated_at = datetime.utcnow().isoformat()
+    if blog_update.published and not db_blog.published_at:
+        db_blog.published_at = datetime.utcnow().isoformat()
+
+    db.commit()
+    db.refresh(db_blog)
+    return db_blog
+
+@app.delete("/admin/blogs/{blog_id}")
+async def delete_blog(blog_id: int, db: Session = Depends(get_db)):
+    """Delete a blog (admin only)."""
+    db_blog = db.query(BlogDB).filter(BlogDB.id == blog_id).first()
+    if not db_blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+
+    # Delete associated image file if it exists
+    if db_blog.featured_image:
+        try:
+            image_path = os.path.join("uploads", "blogs", db_blog.featured_image)
+            if os.path.exists(image_path):
+                os.remove(image_path)
+        except Exception as e:
+            print(f"Warning: Could not delete blog image: {e}")
+
+    db.delete(db_blog)
+    db.commit()
+    return {"message": "Blog deleted successfully"}
+
+@app.get("/admin/blogs", response_model=BlogList)
+async def get_all_blogs(db: Session = Depends(get_db)):
+    """Get all blogs including unpublished ones (admin only)."""
+    blogs = db.query(BlogDB).order_by(BlogDB.created_at.desc()).all()
+    return {"blogs": blogs}
+
+@app.post("/admin/upload-blog-image")
+async def upload_blog_image(file: UploadFile = File(...)):
+    """Upload an image for blog posts."""
+    if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+        raise HTTPException(status_code=400, detail="Only image files are allowed")
+
+    # Create uploads/blogs directory if it doesn't exist
+    upload_dir = os.path.join("uploads", "blogs")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Generate unique filename
+    file_extension = os.path.splitext(file.filename)[1]
+    unique_filename = f"{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000, 9999)}{file_extension}"
+    file_path = os.path.join(upload_dir, unique_filename)
+
+    # Save the file
+    try:
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
+
+    return {
+        "filename": unique_filename,
+        "url": f"/uploads/blogs/{unique_filename}",
+        "message": "Image uploaded successfully"
+    }

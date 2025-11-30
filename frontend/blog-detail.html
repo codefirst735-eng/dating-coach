@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title id="pageTitle">RFH | Blog</title>
+    <meta name="description" id="metaDescription" content="">
+    <meta name="keywords" id="metaKeywords" content="">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        .blog-hero {
+            background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(0, 0, 0, 0.9));
+            padding: 4rem 0;
+            margin-bottom: 3rem;
+        }
+
+        .blog-content {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #6c757d;
+            border-radius: 10px;
+            padding: 3rem;
+            line-height: 1.8;
+        }
+
+        .blog-meta {
+            color: #6c757d;
+            font-size: 0.95rem;
+        }
+
+        .blog-image {
+            width: 100%;
+            max-height: 400px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin: 2rem 0;
+        }
+
+        .back-btn {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+    </style>
+</head>
+
+<body class="bg-black text-light">
+
+    <!-- Header Component -->
+    <div id="header-placeholder"></div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="container text-center py-5">
+        <div class="spinner-border text-danger" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-white-50 mt-3">Loading blog...</p>
+    </div>
+
+    <!-- Blog Content -->
+    <div id="blogContent" style="display: none;">
+        <!-- Hero Section -->
+        <section class="blog-hero">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-10 text-center">
+                        <h1 id="blogTitle" class="display-4 fw-bold mb-3" style="color: #FFB6C1;"></h1>
+                        <div class="blog-meta mb-3">
+                            <span id="blogDate"></span>
+                            <span class="mx-3">•</span>
+                            <span id="blogAuthor"></span>
+                        </div>
+                        <p id="blogExcerpt" class="lead text-white-50"></p>
+                        <a href="blogs.html" class="btn back-btn text-white px-4 py-2 mt-3">
+                            <i class="bi bi-arrow-left me-2"></i> Back to Blogs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="blog-content">
+                        <img id="blogImage" src="" alt="" class="blog-image">
+
+                        <div id="blogBody" class="text-white-50" style="font-size: 1.1rem;">
+                            <!-- Blog content will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="container text-center py-5" style="display: none;">
+        <i class="bi bi-exclamation-triangle text-danger fs-1 mb-3"></i>
+        <h3 class="text-white">Blog not found</h3>
+        <p class="text-white-50">The blog you're looking for doesn't exist or has been removed.</p>
+        <a href="blogs.html" class="btn btn-danger">Back to Blogs</a>
+    </div>
+
+    <!-- Footer Component -->
+    <div id="footer-placeholder"></div>
+
+    <script src="js/components.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/navbar.js"></script>
+    <script src="js/config.js"></script>
+
+    <script>
+        // Get blog slug from URL parameters
+        function getBlogSlug() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('slug');
+        }
+
+        // Load blog when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const slug = getBlogSlug();
+            if (slug) {
+                loadBlog(slug);
+            } else {
+                showError();
+            }
+        });
+
+        // Load blog from API
+        function loadBlog(slug) {
+            fetch(`${API_BASE_URL}/blogs/${slug}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Blog not found');
+                    }
+                    return response.json();
+                })
+                .then(blog => {
+                    displayBlog(blog);
+                    updateMetaTags(blog);
+                })
+                .catch(error => {
+                    console.error('Error loading blog:', error);
+                    showError();
+                });
+        }
+
+        // Display blog content
+        function displayBlog(blog) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('blogContent').style.display = 'block';
+
+            // Update page title
+            document.getElementById('blogTitle').textContent = blog.title;
+
+            // Update meta information
+            const publishedDate = new Date(blog.published_at || blog.created_at);
+            document.getElementById('blogDate').textContent = publishedDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById('blogAuthor').textContent = `By ${blog.author}`;
+            document.getElementById('blogExcerpt').textContent = blog.excerpt;
+
+            // Set featured image
+            const imageUrl = blog.featured_image
+                ? `${API_BASE_URL}/uploads/blogs/${blog.featured_image}`
+                : 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=400&fit=crop'; // Default blog image
+
+            document.getElementById('blogImage').src = imageUrl;
+            document.getElementById('blogImage').alt = blog.title;
+
+            // Set blog content
+            document.getElementById('blogBody').innerHTML = blog.content;
+        }
+
+        // Update meta tags for SEO
+        function updateMetaTags(blog) {
+            document.title = blog.meta_title || blog.title;
+            document.getElementById('metaDescription').content = blog.meta_description || blog.excerpt;
+            document.getElementById('metaKeywords').content = blog.keywords || '';
+        }
+
+        // Show error state
+        function showError() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+        }
+    </script>
+
+</body>
+
+</html>
