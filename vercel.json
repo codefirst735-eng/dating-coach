@@ -1,5 +1,11 @@
 {
     "buildCommand": null,
     "outputDirectory": "frontend",
-    "installCommand": null
+    "installCommand": null,
+    "git": {
+        "deploymentEnabled": {
+            "main": true,
+            "development": false
+        }
+    }
 }
