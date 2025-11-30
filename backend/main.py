@@ -434,6 +434,17 @@ app.add_middleware(
 async def read_root():
     return {"message": "Welcome to FastAPI + Gemini API"}
 
+@app.get("/debug")
+async def debug_info():
+    """Debug endpoint to check API connectivity"""
+    return {
+        "status": "ok",
+        "timestamp": datetime.utcnow().isoformat(),
+        "api_base_url": os.getenv("API_BASE_URL", "not set"),
+        "database_url": os.getenv("DATABASE_URL", "sqlite default"),
+        "gemini_configured": bool(os.getenv("GEMINI_API_KEY"))
+    }
+
 @app.get("/admin/health")
 async def admin_health():
     return {
