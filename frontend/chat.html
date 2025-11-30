@@ -553,6 +553,7 @@
                     method: 'POST',
                     headers: headers,
                     body: body,
+                    keepalive: true  // Ensures request continues even if tab is switched
                 });
 
                 if (response.status === 401) {
@@ -663,16 +664,18 @@
             chatHistory.appendChild(messageDiv);
             chatHistory.scrollTop = chatHistory.scrollHeight;
 
-            // Save to localStorage for guest users if save is true
-            const token = localStorage.getItem('access_token');
-            if (!token && save) {
+            // Only save to localStorage for guest users if save is true
+            // IMPORTANT: Check isGuest variable, not just token presence
+            if (isGuest && save) {
                 saveGuestMessage(sender, text);
             }
+            // For logged-in users, messages are saved server-side via API
         }
 
-        // Save guest message to localStorage
+        // Save guest message to localStorage with proper gender separation
         function saveGuestMessage(sender, content) {
             try {
+                // Get the CURRENT gender preference for proper storage key
                 const gender = localStorage.getItem('guest_gender_preference') || 'male';
                 const storageKey = `guest_chat_history_${gender}`;
 
@@ -687,6 +690,7 @@
                 }
 
                 localStorage.setItem(storageKey, JSON.stringify(messages));
+                console.log(`Saved message to ${storageKey}:`, { sender, content });
             } catch (error) {
                 console.error('Error saving guest message:', error);
             }
