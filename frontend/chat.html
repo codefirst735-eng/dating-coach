@@ -161,13 +161,19 @@
 
         @media (max-width: 768px) {
             .chat-container {
-                height: calc(100vh - 70px);
+                height: calc(100dvh - 70px);
+                /* Use dvh for better mobile support */
+            }
+
+            /* Hide footer on mobile to prevent clutter and scrolling issues */
+            #footer-placeholder {
+                display: none !important;
             }
 
             .chat-history {
                 padding: 1rem !important;
-                padding-bottom: 7rem !important;
-                /* Extra padding for mobile to ensure input is visible */
+                padding-bottom: 8rem !important;
+                /* Increased padding for input area */
             }
 
             .message {
@@ -178,9 +184,12 @@
             }
 
             .chat-input-area {
-                padding: 1rem !important;
-                position: sticky;
+                padding: 0.75rem !important;
+                position: fixed;
+                /* Fixed position to prevent jumping */
                 bottom: 0;
+                left: 0;
+                right: 0;
                 background-color: #0a0a0a;
                 border-top: 2px solid #333;
                 box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.8);
@@ -188,16 +197,17 @@
 
             .chat-input-area .form-control {
                 padding: 0.75rem !important;
-                font-size: 0.95rem;
+                font-size: 16px;
+                /* Prevent zoom on iOS */
             }
 
             .chat-input-area .btn {
-                padding: 0.75rem 1.25rem !important;
+                padding: 0.75rem 1rem !important;
                 font-size: 0.875rem;
             }
 
             .scroll-hint {
-                bottom: 70px;
+                bottom: 85px;
                 font-size: 0.75rem;
                 padding: 0.4rem 0.8rem;
             }
@@ -233,11 +243,22 @@
                 </div>
             </div>
 
-            <form id="chatForm" class="d-flex gap-3">
+            <form id="chatForm" class="d-flex gap-2">
                 <input type="text" id="userInput"
                     class="form-control form-control-lg bg-dark text-white border-secondary rounded-0"
                     placeholder="Describe your situation..." required autocomplete="off">
                 <button type="submit" class="btn btn-danger btn-lg rounded-0 px-4 fw-bold">SEND</button>
+
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-lg rounded-0" type="button" data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                        &#8942;
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                        <li><a class="dropdown-item text-danger" href="#" id="clearHistoryOption">Clear Chat History</a>
+                        </li>
+                    </ul>
+                </div>
             </form>
         </div>
     </div>
@@ -478,6 +499,51 @@
             });
         }
 
+        // Clear history button logic
+        const clearHistoryOption = document.getElementById('clearHistoryOption');
+
+        if (clearHistoryOption) {
+            clearHistoryOption.addEventListener('click', async (e) => {
+                e.preventDefault();
+
+                if (!confirm('Are you sure you want to clear your chat history? This cannot be undone.')) {
+                    return;
+                }
+
+                const gender = document.querySelector('input[name="genderPreference"]:checked')?.value || 'male';
+
+                if (isGuest) {
+                    // Clear guest history
+                    const storageKey = `guest_chat_history_${gender}`;
+                    localStorage.removeItem(storageKey);
+                    chatHistory.innerHTML = '';
+                    showWelcomeMessage(gender);
+                    if (typeof showToast === 'function') showToast('Chat history cleared.', 'success');
+                } else {
+                    // Clear logged-in user history
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/chat/history?coach_type=${gender}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+
+                        if (response.ok) {
+                            chatHistory.innerHTML = '';
+                            showWelcomeMessage(gender);
+                            if (typeof showToast === 'function') showToast('Chat history cleared.', 'success');
+                        } else {
+                            if (typeof showToast === 'function') showToast('Failed to clear history.', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error clearing history:', error);
+                        if (typeof showToast === 'function') showToast('Error clearing history.', 'error');
+                    }
+                }
+            });
+        }
+
         // Show guest status in initial message if applicable
         if (isGuest) {
             const queriesLeft = GUEST_QUERY_LIMIT - guestQueryCount;
@@ -609,6 +675,13 @@
 
             let formatted = escapeHtml(text);
 
+            // Helper to parse inline markdown
+            const parseInline = (str) => {
+                return str
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>');
+            };
+
             // Split into lines
             let lines = formatted.split('\n');
             let html = '';
@@ -624,20 +697,29 @@
                         inBulletList = false;
                     }
                     html += '<br>';
-                } else if (line.startsWith('-') || line.startsWith('•')) {
-                    // Bullet point
-                    if (!inBulletList) {
-                        html += '<ul style="margin: 8px 0; padding-left: 20px;">';
-                        inBulletList = true;
-                    }
-                    html += '<li style="margin: 4px 0;">' + line.substring(1).trim() + '</li>';
                 } else {
-                    // Regular text
-                    if (inBulletList) {
-                        html += '</ul>';
-                        inBulletList = false;
+                    // Check for bullet points
+                    // We check for '* ' (asterisk space) to distinguish from italics
+                    let isBullet = line.startsWith('-') || line.startsWith('•') || line.startsWith('* ');
+
+                    if (isBullet) {
+                        // Bullet point
+                        if (!inBulletList) {
+                            html += '<ul style="margin: 8px 0; padding-left: 20px;">';
+                            inBulletList = true;
+                        }
+                        let content = line.substring(1).trim();
+                        content = parseInline(content);
+                        html += '<li style="margin: 4px 0;">' + content + '</li>';
+                    } else {
+                        // Regular text
+                        if (inBulletList) {
+                            html += '</ul>';
+                            inBulletList = false;
+                        }
+                        let content = parseInline(line);
+                        html += content + '<br>';
                     }
-                    html += line + '<br>';
                 }
             }
 

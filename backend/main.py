@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, UploadFile, File, Depends, HTTPException, status
+from fastapi import FastAPI, Request, UploadFile, File, Form, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -95,6 +95,16 @@ class MessageDB(Base):
     content = Column(String)
     timestamp = Column(String) # ISO date string
     coach_type = Column(String, default="male") # 'male' or 'female'
+
+class ScreenshotAnalysisDB(Base):
+    __tablename__ = "screenshot_analyses"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True, nullable=True)  # NULL for guest users
+    assessment = Column(Text)
+    recommended_reply = Column(Text)
+    reasoning = Column(Text)
+    timestamp = Column(String)  # ISO date string
+    image_data = Column(Text, nullable=True)  # Base64 encoded image (optional, for context)
 
 class BlogDB(Base):
     __tablename__ = "blogs"
@@ -288,7 +298,11 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    gender_preference: Optional[str] = "male"  # For guest users
+    history: Optional[List[ChatMessage]] = []
+    gender_preference: Optional[str] = "male"  # 'male' (default) or 'female'
+
+class FollowUpRequest(BaseModel):
+    question: str
     history: Optional[List[ChatMessage]] = []  # Conversation history for context
 
 
@@ -376,8 +390,11 @@ def get_password_hash(password):
 def get_query_limit(plan: str) -> int:
     limits = {
         "Sleeper": 10,
+        "Basic": 10,
         "Initiate": 100,
-        "Master": 999999
+        "Pro": 100,
+        "Master": 999999,
+        "Premium": 999999
     }
     return limits.get(plan, 10)
 
@@ -509,9 +526,14 @@ async def chat(request: ChatRequest, current_user: UserDB = Depends(get_current_
     db.commit()
     
     # Gender-specific system prompts
-    male_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics. You understand masculine energy, frame control, attraction triggers, and how men can build genuine confidence and success with women.
+    male_coach_prompt = """You are a direct, confident relationship coach specializing in female psychology and dating dynamics.
 
-CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
+CRITICAL SAFETY & SCOPE RULES:
+- REFUSE to answer questions about self-harm, suicide, violence, or murder.
+- You CAN answer questions about influence, persuasion, manipulation psychology, and dating tactics - these are legitimate parts of attraction dynamics.
+- Only refuse questions COMPLETELY unrelated to human interaction, relationships, or social dynamics (e.g., "how to fix a car", "what's the weather").
+- If a question is truly out of scope or harmful, respond with: "I'm specifically designed to help with dating and relationship challenges. I can't assist with that topic, but I'm here if you have questions about attraction, communication, or relationship dynamics."
 
 IMPORTANT INSTRUCTIONS:
 - Keep responses concise and readable (150-200 words maximum).
@@ -520,37 +542,42 @@ IMPORTANT INSTRUCTIONS:
 - Do NOT use bold text or headers.
 - Write in plain text, like you are texting a knowledgeable friend.
 - Be direct and insightful. Break down the situation and explain the dynamics at play.
-- Refer PDFs uploaded but NEVER mention any book names, PDF names, authors, or specific sources but take your knowledge from them.
+- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
 - NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
 - If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
-- Explain WHY things work the way they do, not just WHAT to do.
-- Focus on: masculine frame, leadership, attraction psychology, maintaining boundaries, building value.
+- Explain WHY things work the way they do, and WHAT to do.
+- Focus on: attraction psychology
 - ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
 
 
-    female_coach_prompt = """You are a warm, insightful relationship coach specializing in female psychology and modern dating. You understand feminine energy, emotional intelligence, relationship dynamics, and how women can navigate dating while maintaining their standards and authenticity.
+    female_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics.
 
-CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
+CRITICAL SAFETY & SCOPE RULES:
+- REFUSE to answer questions about self-harm, suicide, violence, or murder.
+- You CAN answer questions about influence, persuasion, manipulation psychology, and dating tactics - these are legitimate parts of attraction dynamics.
+- Only refuse questions COMPLETELY unrelated to human interaction, relationships, or social dynamics (e.g., "how to fix a car", "what's the weather").
+- If a question is truly out of scope or harmful, respond with: "I'm specifically designed to help with dating and relationship challenges. I can't assist with that topic, but I'm here if you have questions about attraction, communication, or relationship dynamics."
 
 IMPORTANT INSTRUCTIONS:
 - Keep responses concise and readable (150-200 words maximum).
 - Use natural paragraph breaks for readability.
-- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- You MAY use bullet points when listing action steps or key points.
 - Do NOT use bold text or headers.
 - Write in plain text, like you are texting a supportive friend.
-- Be direct yet empathetic. Break down the situation and explain the dynamics at play.
+- Be direct. Break down the situation and explain the dynamics at play.
 - NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
 - NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
 - If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
-- Explain WHY things work the way they do, not just WHAT to do.
-- Focus on: recognizing red flags, maintaining standards, emotional intelligence, authentic connection, self-worth.
+- Explain WHY things work the way they do, and WHAT to do.
+- Focus on: attraction psychology.
 - ALWAYS end with a follow-up question to continue the conversation.
 
-Your goal is to sound like a real person who deeply understands female dating dynamics, not a robot giving one-liners."""
+Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
 
 
     # Select prompt based on user's gender preference
@@ -699,18 +726,374 @@ async def get_chat_history(
         ]
     }
 
-@app.post("/analyze-screenshot")
-async def analyze_screenshot(file: UploadFile = File(...), current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
-    current_user.screenshots_analyzed += 1
+@app.delete("/chat/history")
+async def clear_chat_history(
+    coach_type: Optional[str] = None,
+    current_user: UserDB = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    query = db.query(MessageDB).filter(MessageDB.user_id == current_user.id)
+    
+    if coach_type:
+        query = query.filter(MessageDB.coach_type == coach_type)
+    else:
+        # Default to current preference if not specified
+        query = query.filter(MessageDB.coach_type == current_user.gender_preference)
+        
+    # Delete the messages
+    query.delete(synchronize_session=False)
     db.commit()
     
-    # For now, mock analysis or implement vision capability if needed
-    # Gemini supports vision too!
-    return {
-        "assessment": "They are testing your compliance. This is a classic test designed to see if you will jump through their hoops.",
-        "reply": "Haha, nice try. I'm busy tonight, but I might be free on Thursday.",
-        "reasoning": "This reply maintains your frame, shows you have a life (high value), and sets the terms for the interaction on your schedule."
-    }
+    return {"message": "Chat history cleared successfully"}
+
+@app.post("/analyze-screenshot")
+async def analyze_screenshot(
+    files: List[UploadFile] = File(...), 
+    user_color: str = "blue",
+    other_color: str = "gray",
+    user_gender: str = "male",
+    other_gender: str = "female",
+    goal: str = "build_attraction",
+    language: str = "english",
+    current_user: UserDB = Depends(get_current_active_user), 
+    db: Session = Depends(get_db)
+):
+    current_user.screenshots_analyzed += len(files)
+    db.commit()
+    
+    if not GEMINI_API_KEY:
+        return {"error": "Gemini API key not configured"}
+    
+    try:
+        # Read all uploaded images
+        image_parts = []
+        for file in files:
+            image_data = await file.read()
+            mime_type = file.content_type or "image/jpeg"
+            image_parts.append({
+                "mime_type": mime_type,
+                "data": image_data
+            })
+        
+        # Retrieve previous analyses for context (last 3)
+        previous_analyses = db.query(ScreenshotAnalysisDB).filter(
+            ScreenshotAnalysisDB.user_id == current_user.id
+        ).order_by(ScreenshotAnalysisDB.timestamp.desc()).limit(3).all()
+        
+        # Build context from previous analyses
+        context_text = ""
+        if previous_analyses:
+            context_text = "\n\nPREVIOUS ANALYSES CONTEXT (for continuity):\n"
+            for i, analysis in enumerate(reversed(previous_analyses), 1):
+                context_text += f"\nAnalysis {i}:\n"
+                context_text += f"- Assessment: {analysis.assessment[:150]}...\n"
+                context_text += f"- Recommended Reply: {analysis.recommended_reply}\n"
+        
+        # User color and gender clarification
+        color_text = f"\n\n!!!CRITICAL INSTRUCTION - READ CAREFULLY!!!\n"
+        color_text += f"The user asking for help has {user_color.upper()} colored message bubbles.\n"
+        color_text += f"The other person has {other_color.upper()} colored message bubbles.\n"
+        color_text += f"\n"
+        color_text += f"YOU MUST:\n"
+        color_text += f"1. Identify ALL messages with {user_color.upper()} color - these are the USER's messages\n"
+        color_text += f"2. Identify ALL messages with {other_color.upper()} color - these are the OTHER PERSON's messages\n"
+        color_text += f"3. Analyze ONLY the {user_color.upper()} messages (the user's messages)\n"
+        color_text += f"4. DO NOT analyze the {other_color.upper()} messages\n"
+        color_text += f"5. DO NOT assume based on left/right position - ONLY use the COLOR to identify messages\n"
+        color_text += f"\n"
+        color_text += f"Additional context:\n"
+        color_text += f"- The user is {user_gender.upper()} talking to a {other_gender.upper()}\n"
+        color_text += f"- Tailor advice for {user_gender}-{other_gender} dating dynamics\n"
+        color_text += f"- Focus your analysis on what the {user_color.upper()} bubble person is saying/doing"
+        
+        # Map goal codes to descriptions
+        goal_descriptions = {
+            "build_attraction": "build attraction and romantic interest",
+            "get_date": "secure a date or in-person meetup",
+            "maintain_interest": "keep the conversation engaging and maintain their interest",
+            "re_engage": "re-engage after a period of silence or lack of response",
+            "escalate": "escalate intimacy and move the relationship forward",
+            "end_politely": "end the conversation or relationship politely",
+            "general": "get general dating advice"
+        }
+        goal_description = goal_descriptions.get(goal, "navigate this conversation effectively")
+        
+        # Map language codes to language names
+        language_names = {
+            "english": "English",
+            "hinglish": "Hinglish (a natural mix of Hindi and English)",
+            "hindi": "Hindi (Devanagari script)",
+            "spanish": "Spanish",
+            "french": "French",
+            "german": "German",
+            "italian": "Italian",
+            "portuguese": "Portuguese",
+            "russian": "Russian",
+            "japanese": "Japanese",
+            "korean": "Korean",
+            "chinese": "Chinese (Simplified)"
+        }
+        language_name = language_names.get(language, "English")
+        
+        # Create system prompt for screenshot analysis
+        analysis_prompt = f"""You are an expert dating coach analyzing text message screenshots.
+
+ANALYSIS TASK:
+1. Read the conversation in the screenshot
+2. Identify who sent the LAST message in the conversation
+3. Assess the power dynamics and "frame" (who is chasing whom)
+4. Identify signs of attraction, interest level, or red flags
+5. Determine the appropriate next action based on conversation state
+6. Provide context-aware reply options
+
+USER'S GOAL: The user wants to {goal_description}.
+Tailor your advice and reply suggestions specifically to help achieve this goal.
+
+LANGUAGE REQUIREMENT: Generate ALL recommended reply text messages in {language_name}.
+- The assessment and reasoning should be in English
+- ONLY the actual text message replies (the "text" field) should be in {language_name}
+- Make the replies sound natural and authentic in {language_name}
+
+CRITICAL RULES:
+- Keep your analysis concise (150-200 words total)
+- Be direct and strategic
+- Focus on attraction psychology and power dynamics
+- Do NOT mention books, PDFs, or specific methodologies
+- ANALYZE THE CONVERSATION STATE CAREFULLY:
+  * If the USER sent the last message and it's a QUESTION → Recommend WAITING for their response
+  * If the USER is double/triple texting → Flag this as desperate behavior
+  * If the OTHER PERSON hasn't responded in a while → Provide "follow-up" or "move on" advice
+  * If the OTHER PERSON responded → Provide immediate reply suggestions
+{color_text}
+{context_text}
+
+OUTPUT FORMAT:
+Return a JSON object with the following keys:
+- "assessment": Your analysis of the situation and power dynamics. IMPORTANT:
+    * Explain WHY waiting is strategically important
+    * Then provide your full analysis of power dynamics, attraction signals, and what's happening
+    * Consider the user's goal ({goal_description}) in your assessment
+- "replies": A list of 3 distinct reply options with different TONES/STYLES. Each should be an actual text message they could send in {language_name}:
+    * Use descriptive types like: "Playful/Teasing", "Direct/Confident", "Mysterious/Intrigue", "Challenge", "Validation-Withdrawal", "Cocky-Funny", etc.
+    * Each option must have:
+      - "type": The tone/style of the reply (e.g., "Playful/Ambiguous", "Direct/Challenge", "Frame Control")
+      - "text": The ACTUAL message text to copy and send (IN {language_name})
+- "reasoning": Brief explanation of the overall strategy behind these reply styles (helps with user's goal: {goal_description})
+
+Do not include markdown formatting (like ```json) in the response, just the raw JSON string.
+"""
+
+
+        # Initialize Gemini model with vision capability
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        import base64
+        
+        # Build prompt parts: start with the analysis prompt
+        prompt_parts = [analysis_prompt]
+        
+        # Add note about multiple screenshots if applicable
+        if len(image_parts) > 1:
+            prompt_parts.append(f"\n\nNOTE: The user has uploaded {len(image_parts)} screenshots. Please analyze all of them together to provide comprehensive advice. Look for patterns, progression, and context across all the images.")
+        
+        # Add all image parts
+        prompt_parts.extend(image_parts)
+        
+        # Generate analysis with image(s)
+        response = model.generate_content(prompt_parts)
+        
+        # Parse the response to extract assessment, reply, and reasoning
+        full_response = response.text
+        
+        # Clean up potential markdown code blocks
+        import json
+        from datetime import datetime
+        cleaned_response = full_response.replace("```json", "").replace("```", "").strip()
+        
+        result_data = {}
+        try:
+            parsed_response = json.loads(cleaned_response)
+            
+            # Handle both old (single reply) and new (multiple replies) formats for robustness
+            replies = parsed_response.get("replies", [])
+            
+            # Ensure replies is a list
+            if isinstance(replies, str):
+                replies = [{"type": "Recommended", "text": replies}]
+            elif not isinstance(replies, list):
+                replies = []
+                
+            if not replies and "reply" in parsed_response:
+                replies = [{"type": "Recommended", "text": parsed_response["reply"]}]
+            
+            # Final fallback if no replies found
+            if not replies:
+                replies = [{"type": "Analysis", "text": "Please check the assessment above for advice."}]
+                
+            result_data = {
+                "assessment": parsed_response.get("assessment", full_response),
+                "replies": replies,
+                "reasoning": parsed_response.get("reasoning", "Check assessment")
+            }
+        except json.JSONDecodeError:
+            # Fallback if JSON parsing fails
+            result_data = {
+                "assessment": full_response,
+                "replies": [{"type": "Error", "text": "Could not parse replies. See assessment."}],
+                "reasoning": "See assessment above"
+            }
+        
+        # Save the analysis to database
+        # We store the list of replies as a JSON string in the recommended_reply column
+        new_analysis = ScreenshotAnalysisDB(
+            user_id=current_user.id,
+            assessment=result_data["assessment"],
+            recommended_reply=json.dumps(result_data["replies"]),
+            reasoning=result_data["reasoning"],
+            timestamp=datetime.utcnow().isoformat(),
+            image_data=base64.b64encode(image_data).decode() if len(image_data) < 500000 else None  # Save image if < 500KB
+        )
+        db.add(new_analysis)
+        db.commit()
+        db.refresh(new_analysis)  # Refresh to get the ID
+        
+        result_data["id"] = new_analysis.id
+        return result_data
+    
+    except Exception as e:
+        print(f"Screenshot analysis error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "assessment": f"Unable to analyze the screenshot. Error: {str(e)}",
+            "reply": "N/A",
+            "reasoning": "Technical error occurred during analysis."
+        }
+
+@app.get("/screenshot-history")
+async def get_screenshot_history(current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Retrieve screenshot analysis history for the authenticated user"""
+    analyses = db.query(ScreenshotAnalysisDB).filter(
+        ScreenshotAnalysisDB.user_id == current_user.id
+    ).order_by(ScreenshotAnalysisDB.timestamp.desc()).all()
+    
+    import json
+    result = []
+    for analysis in analyses:
+        # Parse the recommended_reply from JSON string to array
+        replies = []
+        try:
+            if analysis.recommended_reply:
+                # Try to parse as JSON array
+                parsed = json.loads(analysis.recommended_reply)
+                if isinstance(parsed, list):
+                    replies = parsed
+                else:
+                    # If it's a string, wrap it
+                    replies = [{"type": "Recommended", "text": str(parsed)}]
+            else:
+                replies = [{"type": "Analysis", "text": "See assessment above"}]
+        except (json.JSONDecodeError, TypeError):
+            # If parsing fails, treat as plain string
+            replies = [{"type": "Recommended", "text": str(analysis.recommended_reply)}]
+        
+        result.append({
+            "id": analysis.id,
+            "assessment": analysis.assessment,
+            "replies": replies,  # Changed from "reply" to "replies" and parsed the JSON
+            "reasoning": analysis.reasoning,
+            "timestamp": analysis.timestamp,
+            "image_data": analysis.image_data
+        })
+    
+    return result
+
+
+@app.delete("/screenshot-history")
+async def delete_screenshot_history(current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
+    """Delete all screenshot analysis history for the authenticated user"""
+    try:
+        deleted_count = db.query(ScreenshotAnalysisDB).filter(
+            ScreenshotAnalysisDB.user_id == current_user.id
+        ).delete()
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Successfully deleted {deleted_count} analysis records",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete history: {str(e)}")
+
+
+@app.post("/screenshot-analysis/{analysis_id}/followup")
+async def screenshot_followup(
+    analysis_id: int,
+    request: FollowUpRequest,
+    current_user: UserDB = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Handle follow-up questions about a specific screenshot analysis"""
+    
+    # Verify the analysis belongs to the current user
+    analysis = db.query(ScreenshotAnalysisDB).filter(
+        ScreenshotAnalysisDB.id == analysis_id,
+        ScreenshotAnalysisDB.user_id == current_user.id
+    ).first()
+    
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    
+    user_question = request.question.strip()
+    if not user_question:
+        raise HTTPException(status_code=400, detail="Question is required")
+    
+    # Build context from the original analysis
+    context = f"""
+ORIGINAL SCREENSHOT ANALYSIS:
+Assessment: {analysis.assessment}
+Recommended Replies: {analysis.recommended_reply}
+Reasoning: {analysis.reasoning}
+
+USER FOLLOW-UP QUESTION:
+{user_question}
+
+INSTRUCTIONS:
+You are a dating coach. The user has asked a follow-up question about the above analysis.
+Answer their question directly and concisely. If they're asking for clarification, provide it.
+If they're asking about a specific aspect (like "what if she says X?"), give them targeted advice.
+Keep your response focused and actionable.
+"""
+    
+    try:
+        # Initialize model - ensure API key is configured globally or passed here if needed
+        # Assuming genai.configure(api_key=...) is called at startup
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        # Run synchronous generation in a thread pool to avoid blocking the event loop
+        import asyncio
+        from functools import partial
+        
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None, 
+            partial(model.generate_content, context)
+        )
+        
+        return {
+            "success": True,
+            "answer": response.text,
+            "question": user_question
+        }
+    except Exception as e:
+        print(f"FOLLOW-UP ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to generate response: {str(e)}")
+
+
 
 @app.post("/guest-chat")
 async def guest_chat(request: ChatRequest, db: Session = Depends(get_db)):
@@ -720,9 +1103,14 @@ async def guest_chat(request: ChatRequest, db: Session = Depends(get_db)):
     gender_preference = request.gender_preference if request.gender_preference in ["male", "female"] else "male"
     
     # Gender-specific system prompts (same as authenticated users)
-    male_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics. You understand masculine energy, frame control, attraction triggers, and how men can build genuine confidence and success with women.
+    male_coach_prompt = """You are a direct, confident relationship coach specializing in female psychology and dating dynamics.
 
-CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
+CRITICAL SAFETY & SCOPE RULES:
+- REFUSE to answer questions about self-harm, suicide, violence, or murder.
+- You CAN answer questions about influence, persuasion, manipulation psychology, and dating tactics - these are legitimate parts of attraction dynamics.
+- Only refuse questions COMPLETELY unrelated to human interaction, relationships, or social dynamics (e.g., "how to fix a car", "what's the weather").
+- If a question is truly out of scope or harmful, respond with: "I'm specifically designed to help with dating and relationship challenges. I can't assist with that topic, but I'm here if you have questions about attraction, communication, or relationship dynamics."
 
 IMPORTANT INSTRUCTIONS:
 - Keep responses concise and readable (150-200 words maximum).
@@ -736,29 +1124,34 @@ IMPORTANT INSTRUCTIONS:
 - If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Focus on: masculine frame, leadership, attraction psychology, maintaining boundaries, building value.
+- Focus on: attraction psychology
 - ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
 
 
-    female_coach_prompt = """You are a warm, insightful relationship coach specializing in female psychology and modern dating. You understand feminine energy, emotional intelligence, relationship dynamics, and how women can navigate dating while maintaining their standards and authenticity.
+    female_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics.
 
-CONTEXT: Your users are from India. Use Indian names, cultural context, and dating scenarios relevant to Indian society when giving examples.
+
+CRITICAL SAFETY & SCOPE RULES:
+- REFUSE to answer questions about self-harm, suicide, violence, or murder.
+- You CAN answer questions about influence, persuasion, manipulation psychology, and dating tactics - these are legitimate parts of attraction dynamics.
+- Only refuse questions COMPLETELY unrelated to human interaction, relationships, or social dynamics (e.g., "how to fix a car", "what's the weather").
+- If a question is truly out of scope or harmful, respond with: "I'm specifically designed to help with dating and relationship challenges. I can't assist with that topic, but I'm here if you have questions about attraction, communication, or relationship dynamics."
 
 IMPORTANT INSTRUCTIONS:
 - Keep responses concise and readable (150-200 words maximum).
 - Use natural paragraph breaks for readability.
-- You MAY use bullet points (with hyphens) when listing action steps or key points.
+- You MAY use bullet points when listing action steps or key points.
 - Do NOT use bold text or headers.
 - Write in plain text, like you are texting a supportive friend.
-- Be direct yet empathetic. Break down the situation and explain the dynamics at play.
+- Be direct. Break down the situation and explain the dynamics at play.
 - NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
 - NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
 - If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
-- Explain WHY things work the way they do, not just WHAT to do.
-- Focus on: recognizing red flags, maintaining standards, emotional intelligence, authentic connection, self-worth.
+- Explain WHY things work the way they do, and WHAT to do.
+- Focus on: attraction psychology.
 - ALWAYS end with a follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands female dating dynamics, not a robot giving one-liners."""
@@ -832,12 +1225,141 @@ Your goal is to sound like a real person who deeply understands female dating dy
         return {"response": random.choice(responses)}
 
 @app.post("/guest-analyze")
-async def guest_analyze_screenshot(file: UploadFile = File(...)):
-    return {
-        "assessment": "They are testing your compliance. This is a classic test designed to see if you will jump through their hoops.",
-        "reply": "Haha, nice try. I'm busy tonight, but I might be free on Thursday.",
-        "reasoning": "This reply maintains your frame, shows you have a life (high value), and sets the terms for the interaction on your schedule."
-    }
+async def guest_analyze_screenshot(
+    file: UploadFile = File(...), 
+    user_color: str = "blue",
+    other_color: str = "gray",
+    user_gender: str = "male",
+    other_gender: str = "female"
+):
+    if not GEMINI_API_KEY:
+        return {"error": "Gemini API key not configured"}
+    
+    try:
+        # Read the uploaded image
+        image_data = await file.read()
+        
+        # User color and gender clarification
+        color_text = f"\n\n!!!CRITICAL INSTRUCTION - READ CAREFULLY!!!\n"
+        color_text += f"The user asking for help has {user_color.upper()} colored message bubbles.\n"
+        color_text += f"The other person has {other_color.upper()} colored message bubbles.\n"
+        color_text += f"\n"
+        color_text += f"YOU MUST:\n"
+        color_text += f"1. Identify ALL messages with {user_color.upper()} color - these are the USER's messages\n"
+        color_text += f"2. Identify ALL messages with {other_color.upper()} color - these are the OTHER PERSON's messages\n"
+        color_text += f"3. Analyze ONLY the {user_color.upper()} messages (the user's messages)\n"
+        color_text += f"4. DO NOT analyze the {other_color.upper()} messages\n"
+        color_text += f"5. DO NOT assume based on left/right position - ONLY use the COLOR to identify messages\n"
+        color_text += f"\n"
+        color_text += f"Additional context:\n"
+        color_text += f"- The user is {user_gender.upper()} talking to a {other_gender.upper()}\n"
+        color_text += f"- Tailor advice for {user_gender}-{other_gender} dating dynamics\n"
+        color_text += f"- Focus your analysis on what the {user_color.upper()} bubble person is saying/doing"
+        
+        # Create system prompt for screenshot analysis
+        analysis_prompt = f"""You are an expert dating coach analyzing text message screenshots.
+
+ANALYSIS TASK:
+1. Read the conversation in the screenshot
+2. Identify who sent the LAST message in the conversation
+3. Assess the power dynamics and "frame" (who is chasing whom)
+4. Identify signs of attraction, interest level, or red flags
+5. Determine the appropriate next action based on conversation state
+6. Provide context-aware reply options
+
+CRITICAL RULES:
+- Keep your analysis concise (150-200 words total)
+- Be direct and strategic
+- Focus on attraction psychology and power dynamics
+- Do NOT mention books, PDFs, or specific methodologies
+- ANALYZE THE CONVERSATION STATE CAREFULLY:
+  * If the USER sent the last message and it's a QUESTION → Recommend WAITING for their response
+  * If the USER is double/triple texting → Flag this as desperate behavior
+  * If the OTHER PERSON hasn't responded in a while → Provide "follow-up" or "move on" advice
+  * If the OTHER PERSON responded → Provide immediate reply suggestions
+{color_text}
+
+OUTPUT FORMAT:
+Return a JSON object with the following keys:
+- "assessment": Your analysis of the situation and power dynamics. IMPORTANT:
+    * If the user should WAIT before texting, clearly state this WARNING at the start: "⚠️ DO NOT TEXT YET - Wait for her response first."
+    * Explain WHY waiting is strategically important
+    * Then provide your full analysis of power dynamics, attraction signals, and what's happening
+- "replies": A list of 3 distinct reply options with different TONES/STYLES. Each should be an actual text message they could send:
+    * Use descriptive types like: "Playful/Teasing", "Direct/Confident", "Mysterious/Intrigue", "Challenge", "Validation-Withdrawal", "Cocky-Funny", etc.
+    * Each option must have:
+      - "type": The tone/style of the reply (e.g., "Playful/Ambiguous", "Direct/Challenge", "Frame Control")
+      - "text": The ACTUAL message text to copy and send
+- "reasoning": Brief explanation of the overall strategy behind these reply styles
+
+Do not include markdown formatting (like ```json) in the response, just the raw JSON string.
+"""
+
+        # Initialize Gemini model with vision capability
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        # Create the image part for Gemini
+        import base64
+        
+        # Determine mime type based on file extension or default to jpeg
+        mime_type = file.content_type or "image/jpeg"
+        
+        image_part = {
+            "mime_type": mime_type,
+            "data": image_data
+        }
+        
+        # Generate analysis with image
+        response = model.generate_content([analysis_prompt, image_part])
+        
+        # Parse the response to extract assessment, reply, and reasoning
+        full_response = response.text
+        
+        # Clean up potential markdown code blocks
+        import json
+        cleaned_response = full_response.replace("```json", "").replace("```", "").strip()
+        
+        try:
+            parsed_response = json.loads(cleaned_response)
+            
+            # Handle both old (single reply) and new (multiple replies) formats
+            replies = parsed_response.get("replies", [])
+            
+            # Ensure replies is a list
+            if isinstance(replies, str):
+                replies = [{"type": "Recommended", "text": replies}]
+            elif not isinstance(replies, list):
+                replies = []
+                
+            if not replies and "reply" in parsed_response:
+                replies = [{"type": "Recommended", "text": parsed_response["reply"]}]
+                
+            # Final fallback if no replies found
+            if not replies:
+                replies = [{"type": "Analysis", "text": "Please check the assessment above for advice."}]
+                
+            return {
+                "assessment": parsed_response.get("assessment", full_response),
+                "replies": replies,
+                "reasoning": parsed_response.get("reasoning", "Check assessment")
+            }
+        except json.JSONDecodeError:
+            # Fallback if JSON parsing fails
+            return {
+                "assessment": full_response,
+                "replies": [{"type": "Error", "text": "See assessment above"}],
+                "reasoning": "See assessment above"
+            }
+    
+    except Exception as e:
+        print(f"Guest screenshot analysis error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "assessment": f"Unable to analyze the screenshot. Error: {str(e)}",
+            "reply": "N/A",
+            "reasoning": "Technical error occurred during analysis."
+        }
 
 @app.post("/update-plan")
 async def update_plan(plan_data: PlanUpdate, current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
@@ -883,7 +1405,7 @@ async def update_profile(profile_data: ProfileUpdate, current_user: UserDB = Dep
 @app.post("/admin/upload-pdf", response_model=FileUploadResponse)
 async def upload_pdf(
     file: UploadFile = File(...), 
-    gender_category: str = "male",  # Default to male if not specified
+    gender_category: str = Form("male"),  # Default to male if not specified
     db: Session = Depends(get_db)
 ):
     print(f"Received upload request for file: {file.filename}, gender_category: {gender_category}")
@@ -994,13 +1516,21 @@ async def delete_file(file_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
 
 @app.post("/admin/replace-all-files")
-async def replace_all_files(files: List[UploadFile] = File(...), db: Session = Depends(get_db)):
+async def replace_all_files(
+    files: List[UploadFile] = File(...), 
+    gender_category: str = Form("male"),
+    db: Session = Depends(get_db)
+):
     if not GEMINI_API_KEY:
         raise HTTPException(status_code=503, detail="Gemini API not configured")
     
+    if gender_category not in ["male", "female"]:
+        raise HTTPException(status_code=400, detail="gender_category must be 'male' or 'female'")
+    
     try:
-        # Delete all existing files
-        existing_files = db.query(GeminiFileDB).all()
+        # Delete all existing files FOR THIS CATEGORY
+        # We should only replace files for the specific coach type, not ALL files
+        existing_files = db.query(GeminiFileDB).filter(GeminiFileDB.gender_category == gender_category).all()
         for file_record in existing_files:
             try:
                 genai.delete_file(file_record.file_id)
@@ -1028,7 +1558,8 @@ async def replace_all_files(files: List[UploadFile] = File(...), db: Session = D
                     file_id=uploaded_file.name,
                     filename=file.filename,
                     uploaded_at=datetime.utcnow().isoformat(),
-                    purpose="assistants"
+                    purpose="assistants",
+                    gender_category=gender_category
                 )
                 db.add(file_record)
                 uploaded_files.append({
