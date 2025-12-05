@@ -464,6 +464,31 @@ section.py-4.bg-black .col-lg-7 {
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
+
+    /* Global mobile centering */
+    .container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .row {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    [class*="col-"] {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
+    /* Ensure text and cards are centered */
+    .card,
+    .upload-area,
+    .analysis-result {
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
     .display-1 {
         font-size: 3.5rem;
     }
