@@ -16,43 +16,58 @@
 
 <body class="bg-black text-light signup-page">
 
-    <!-- Header Component -->
-    <div id="header-placeholder"></div>
-
-    <div class="container signup-container">
-        <div class="row justify-content-center">
-            <div class="col-12 col-md-5 col-lg-4">
-                <div class="text-center mb-4 signup-logo">
+    <!-- Main Content - Vertically Centered -->
+    <div class="container d-flex flex-column justify-content-center min-vh-100 py-5">
+        <div class="row justify-content-center w-100 m-0">
+            <div class="col-12 col-md-6 col-lg-5 col-xl-4 p-0">
+                <!-- Logo -->
+                <div class="text-center mb-5 signup-logo">
                     <a href="index.html" class="text-decoration-none">
-                        <h2 class="fw-bold text-white text-uppercase tracking-wider">RFH <span
-                                class="text-danger">.</span></h2>
+                        <h1 class="display-4 fw-bold text-white text-uppercase tracking-wider mb-0">RFH<span
+                                class="text-danger">.</span></h1>
                     </a>
+                    <p class="text-white-50 mt-2 small text-uppercase spacing-2">Relationship Strategy</p>
                 </div>
 
-                <div class="card bg-dark border-secondary signup-card">
-                    <div class="card-body">
-                        <h3 class="fw-bold text-white mb-4 text-center signup-title">Welcome Back</h3>
+                <!-- Login Card -->
+                <div class="card bg-dark border-secondary signup-card shadow-lg"
+                    style="border-radius: 1rem; overflow: hidden; border: 1px solid #333;">
+                    <div class="card-body p-4 p-md-5">
+                        <h3 class="fw-bold text-white mb-2 text-center signup-title">Welcome Back</h3>
+                        <p class="text-white-50 text-center mb-4 small">Your strategy command center.</p>
+
                         <form id="loginForm">
                             <div class="mb-3 form-group-mobile">
-                                <label for="email" class="form-label text-white-50 small">Email Address</label>
+                                <label for="email" class="form-label text-white-50 small fw-bold">EMAIL ADDRESS</label>
                                 <input type="email"
-                                    class="form-control bg-black text-white border-secondary rounded-0 signup-input"
-                                    id="email" required>
+                                    class="form-control bg-black text-white border-secondary rounded-3 py-3 signup-input"
+                                    placeholder="name@example.com" id="email" required style="font-size: 0.95rem;">
                             </div>
                             <div class="mb-4 form-group-mobile">
-                                <label for="password" class="form-label text-white-50 small">Password</label>
+                                <label for="password" class="form-label text-white-50 small fw-bold">PASSWORD</label>
                                 <input type="password"
-                                    class="form-control bg-black text-white border-secondary rounded-0 signup-input"
-                                    id="password" required>
+                                    class="form-control bg-black text-white border-secondary rounded-3 py-3 signup-input"
+                                    placeholder="••••••••" id="password" required style="font-size: 0.95rem;">
                             </div>
                             <button type="submit"
-                                class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase mb-3 signup-btn">Login</button>
+                                class="btn btn-danger w-100 rounded-3 py-3 fw-bold text-uppercase mb-4 signup-btn shadow-danger"
+                                style="letter-spacing: 1px; font-size: 0.9rem;">
+                                Login
+                            </button>
                         </form>
-                        <div class="text-center signup-footer">
-                            <p class="small text-white-50 mb-0">Don't have an account? <a href="signup.html"
-                                    class="text-danger text-decoration-none fw-bold">Sign Up</a></p>
+
+                        <div class="text-center signup-footer pt-2 border-top border-secondary">
+                            <p class="small text-white-50 mb-0 mt-3">Don't have an account? <a href="signup.html"
+                                    class="text-danger text-decoration-none fw-bold ms-1">Sign Up</a></p>
                         </div>
                     </div>
+                </div>
+
+                <!-- Back Link -->
+                <div class="text-center mt-4">
+                    <a href="index.html" class="text-secondary text-decoration-none small hover-text-white">
+                        ← Back to Home
+                    </a>
                 </div>
             </div>
         </div>

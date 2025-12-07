@@ -16,50 +16,59 @@
 
 <body class="bg-black text-light signup-page">
 
-    <!-- Header Component -->
-    <div id="header-placeholder"></div>
-
-    <div class="container-fluid signup-container">
-        <div class="row min-vh-100 align-items-center">
+    <!-- Main Content -->
+    <div class="container-fluid signup-container p-0">
+        <div class="row min-vh-100 g-0">
             <!-- Left Side - Signup Form -->
-            <div class="col-lg-5 col-md-6 signup-form-section">
-                <div class="px-4 px-lg-5">
-                    <div class="text-center mb-4 signup-logo d-lg-none">
+            <div
+                class="col-lg-5 col-md-6 d-flex flex-column justify-content-center bg-black position-relative p-4 p-lg-5">
+                <div class="signup-form-wrapper mx-auto w-100" style="max-width: 480px;">
+                    <!-- Logo -->
+                    <div class="text-center mb-5">
                         <a href="index.html" class="text-decoration-none">
-                            <h2 class="fw-bold text-white text-uppercase tracking-wider">RFH <span
-                                    class="text-danger">.</span></h2>
+                            <h1 class="display-4 fw-bold text-white text-uppercase tracking-wider mb-0">RFH<span
+                                    class="text-danger">.</span></h1>
                         </a>
+                        <p class="text-white-50 mt-2 small text-uppercase spacing-2">Relationship Strategy</p>
                     </div>
 
-                    <div class="card bg-dark border-secondary signup-card">
-                        <div class="card-body p-4 p-lg-5">
-                            <h3 class="fw-bold text-white mb-4 text-center signup-title">Join the RFH Community!</h3>
+                    <div class="card bg-dark border-secondary signup-card shadow-lg"
+                        style="border-radius: 1rem; overflow: hidden; border: 1px solid #333;">
+                        <div class="card-body p-4 p-md-5">
+                            <h3 class="fw-bold text-white mb-2 text-center signup-title">Join the Inner Circle</h3>
+                            <p class="text-white-50 text-center mb-4 small">Science-backed dating intelligence.</p>
+
                             <form id="signupForm">
-                                <div class="mb-3 form-group-mobile">
-                                    <label for="name" class="form-label text-white-50 small">Full Name</label>
+                                <div class="mb-3">
+                                    <label for="name" class="form-label text-white-50 small fw-bold">FULL NAME</label>
                                     <input type="text"
-                                        class="form-control bg-black text-white border-secondary rounded-0 signup-input"
-                                        id="name" required>
+                                        class="form-control bg-black text-white border-secondary rounded-3 py-3 signup-input"
+                                        placeholder="John Doe" id="name" required style="font-size: 0.95rem;">
                                 </div>
-                                <div class="mb-3 form-group-mobile">
-                                    <label for="email" class="form-label text-white-50 small">Email Address</label>
+                                <div class="mb-3">
+                                    <label for="email" class="form-label text-white-50 small fw-bold">EMAIL
+                                        ADDRESS</label>
                                     <input type="email"
-                                        class="form-control bg-black text-white border-secondary rounded-0 signup-input"
-                                        id="email" required>
+                                        class="form-control bg-black text-white border-secondary rounded-3 py-3 signup-input"
+                                        placeholder="name@example.com" id="email" required style="font-size: 0.95rem;">
                                 </div>
-                                <div class="mb-4 form-group-mobile">
-                                    <label for="password" class="form-label text-white-50 small">Password</label>
+                                <div class="mb-4">
+                                    <label for="password"
+                                        class="form-label text-white-50 small fw-bold">PASSWORD</label>
                                     <input type="password"
-                                        class="form-control bg-black text-white border-secondary rounded-0 signup-input"
-                                        id="password" required>
+                                        class="form-control bg-black text-white border-secondary rounded-3 py-3 signup-input"
+                                        placeholder="••••••••" id="password" required style="font-size: 0.95rem;">
                                 </div>
                                 <button type="submit"
-                                    class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase mb-3 signup-btn">Create
-                                    Account</button>
+                                    class="btn btn-danger w-100 rounded-3 py-3 fw-bold text-uppercase mb-4 signup-btn shadow-danger"
+                                    style="letter-spacing: 1px; font-size: 0.9rem;">
+                                    Start Your Evolution
+                                </button>
                             </form>
-                            <div class="text-center signup-footer">
-                                <p class="small text-white-50 mb-0">Already have an account? <a href="login.html"
-                                        class="text-danger text-decoration-none fw-bold">Login</a></p>
+
+                            <div class="text-center signup-footer pt-2 border-top border-secondary">
+                                <p class="small text-white-50 mb-0 mt-3">Already a member? <a href="login.html"
+                                        class="text-danger text-decoration-none fw-bold ms-1">Login</a></p>
                             </div>
                         </div>
                     </div>
@@ -68,27 +77,71 @@
 
             <!-- Right Side - Branding -->
             <div
-                class="col-lg-7 col-md-6 signup-branding-section d-none d-md-flex align-items-center justify-content-center">
-                <div class="px-4 px-lg-5 text-center text-lg-start">
-                    <div class="border-top border-secondary pt-4 mb-4"></div>
-                    <h1 class="display-4 fw-bold text-white text-uppercase mb-4">Relationship for Humans</h1>
-                    <p class="lead text-white mb-4">Build better relationships through understanding human behavior.</p>
+                class="col-lg-7 col-md-6 d-none d-md-flex flex-column justify-content-center bg-dark p-5 position-relative overflow-hidden">
+                <!-- Abstract Background Overlay -->
+                <div class="position-absolute top-0 start-0 w-100 h-100 opacity-25"
+                    style="background: radial-gradient(circle at center, #300000 0%, #000000 70%); z-index: 1;"></div>
 
-                    <ul class="list-unstyled text-white-50 mb-5" style="font-size: 1.25rem;">
-                        <li class="mb-3 d-flex align-items-start">
-                            <span class="text-danger me-3" style="font-size: 1.5rem;">✓</span>
-                            <span>Decode mixed signals with behavioral science</span>
-                        </li>
-                        <li class="mb-3 d-flex align-items-start">
-                            <span class="text-danger me-3" style="font-size: 1.5rem;">✓</span>
-                            <span>Understand the psychology of attraction</span>
-                        </li>
-                        <li class="mb-3 d-flex align-items-start">
-                            <span class="text-danger me-3" style="font-size: 1.5rem;">✓</span>
-                            <span>Build genuine connections that last</span>
-                        </li>
-                    </ul>
+                <div class="position-relative px-lg-5" style="z-index: 2;">
+                    <h1 class="display-3 fw-bold text-white text-uppercase mb-4" style="letter-spacing: -2px;">
+                        Dating Is<br>
+                        <span class="text-danger">Skilled Behavior.</span>
+                    </h1>
+                    <p class="lead text-white-50 mb-5 w-75">
+                        Stop guessing. Start executing. We use evolutionary psychology and behavioral analysis to help
+                        you navigate modern relationships.
+                    </p>
 
+                    <div class="row g-4 mb-5">
+                        <div class="col-12">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="rounded-circle bg-danger p-2 me-3 d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M10.478 1.647a.5.5 0 1 0-.956-.294l-4 13a.5.5 0 0 0 .956.294l4-13zM4.854 4.146a.5.5 0 0 1 0 .708L1.707 8l3.147 3.146a.5.5 0 0 1-.708.708l-3.5-3.5a.5.5 0 0 1 0-.708l3.5-3.5a.5.5 0 0 1 .708 0zm6.292 0a.5.5 0 0 0 0 .708L14.293 8l-3.147 3.146a.5.5 0 0 0 .708.708l3.5-3.5a.5.5 0 0 0 0-.708l-3.5-3.5a.5.5 0 0 0-.708 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h5 class="text-white fw-bold mb-0">AI Text Analysis</h5>
+                                    <small class="text-white-50">Decode subtext in seconds.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="rounded-circle bg-danger p-2 me-3 d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M8 15c4.418 0 8-3.134 8-7s-3.582-7-8-7-8 3.134-8 7c0 1.76.743 3.37 1.97 4.6-.097 1.016-.417 2.13-.771 2.966-.079.186.074.394.273.362 2.256-.37 3.597-.938 4.18-1.234A9.06 9.06 0 0 0 8 15z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h5 class="text-white fw-bold mb-0">Real-time Coaching</h5>
+                                    <small class="text-white-50">Always know your next move.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-danger p-2 me-3 d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white"
+                                        viewBox="0 0 16 16">
+                                        <path
+                                            d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h5 class="text-white fw-bold mb-0">Psychology First</h5>
+                                    <small class="text-white-50">Principled frameworks, not tricks.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

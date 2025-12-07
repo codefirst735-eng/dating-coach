@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, UploadFile, File, Form, Depends, HTTPException, status
+from fastapi import FastAPI, Request, UploadFile, File, Form, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -300,6 +300,8 @@ class ChatRequest(BaseModel):
     message: str
     history: Optional[List[ChatMessage]] = []
     gender_preference: Optional[str] = "male"  # 'male' (default) or 'female'
+    persona: Optional[str] = "standard"
+    language: Optional[str] = "English"
 
 class FollowUpRequest(BaseModel):
     question: str
@@ -511,6 +513,53 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 async def read_users_me(current_user: UserDB = Depends(get_current_active_user)):
     return current_user
 
+@app.post("/transcribe")
+async def transcribe_audio(
+    file: UploadFile = File(...),
+    current_user: UserDB = Depends(get_current_active_user)
+):
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+        
+    try:
+        # Read file content
+        content = await file.read()
+        
+        # Save to temp file extension based on content type if possible, default to webm
+        ext = ".webm"
+        if file.content_type == "audio/mp4":
+            ext = ".m4a"
+        elif file.content_type == "audio/mpeg":
+            ext = ".mp3"
+        elif file.content_type == "audio/wav":
+            ext = ".wav"
+            
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_audio:
+            temp_audio.write(content)
+            temp_audio_path = temp_audio.name
+            
+        try:
+            # Upload to Gemini
+            # genai.upload_file handles the upload. 
+            auth_file = genai.upload_file(temp_audio_path, mime_type=file.content_type or "audio/webm")
+            
+            # Transcribe
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(["Transcribe the following audio exactly as spoken. Return only the text.", auth_file])
+            
+            if not response.text:
+                raise Exception("Empty response from AI")
+                
+            return {"text": response.text.strip()}
+        finally:
+            # Cleanup local temp file
+            if os.path.exists(temp_audio_path):
+                os.remove(temp_audio_path)
+                
+    except Exception as e:
+        print(f"Transcription error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to transcribe audio: {str(e)}")
+
 @app.post("/chat")
 async def chat(request: ChatRequest, current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
     # Check query limit
@@ -541,16 +590,14 @@ IMPORTANT INSTRUCTIONS:
 - You MAY use bullet points (with hyphens) when listing action steps or key points.
 - Do NOT use bold text or headers.
 - Write in plain text, like you are texting a knowledgeable friend.
-- Be direct and insightful. Break down the situation and explain the dynamics at play.
-- NEVER mention any book names, PDF names, authors, or specific sources. Present all knowledge as your own expertise.
+- Be direct. Break down the situation and explain the dynamics at play.
+- Take your knowledge from the PDFs I have uploaded for you.
 - NEVER use exact terminology or concept names from books/PDFs. Always paraphrase and adapt concepts into your own words.
 - If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, and WHAT to do.
-- Focus on: attraction psychology
-- ALWAYS end with a follow-up question to continue the conversation.
-
-Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
+- Focus on: attraction psychology, evolutionary psychology, and behavioural psychology.
+"""
 
 
     female_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics.
@@ -574,8 +621,8 @@ IMPORTANT INSTRUCTIONS:
 - If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, and WHAT to do.
-- Focus on: attraction psychology.
-- ALWAYS end with a follow-up question to continue the conversation.
+- Focus on: attraction psychology, behavioural psychology, and evolutionary psychology.
+- ALWAYS end with just one follow-up question to continue the conversation.
 
 Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
 
@@ -583,10 +630,26 @@ Your goal is to sound like a real person who deeply understands male dating dyna
     # Select prompt based on user's gender preference
     base_prompt = male_coach_prompt if current_user.gender_preference == "male" else female_coach_prompt
     
+    # Persona overrides
+    persona_prompts = {
+        "drill_sergeant": "\n\nPERSONA OVERRIDE: You are a TOUGH LOVE 'Drill Sergeant' type coach. Be brutally honest. Stop the user from making excuses. Use short, punchy sentences. Don't coddle them. Focus on discipline and action. Your tone is commanding.",
+        "wingman": "\n\nPERSONA OVERRIDE: You are an enthusiastic 'Wingman'. Use casual, bro-like language (like 'dude', 'bro', 'man'). Be hype and supportive. Focus on boosting their confidence and giving practical, 'street-smart' advice. Your tone is high-energy.",
+        "therapist": "\n\nPERSONA OVERRIDE: You are an Empathetic Relationship Therapist. Focus on the emotional undercurrents, anxiety, and connection. Be gentle, validating, and ask deep questions about how they feel. Use softer language. Your tone is calming."
+    }
+    
+    # Apply persona if selected (and not standard)
+    persona_instruction = persona_prompts.get(request.persona, "")
+
     # Add user's name to the prompt to prevent hallucinated names
     user_name = current_user.full_name if current_user.full_name else "User"
     user_name_instruction = f"\n\nIMPORTANT: The user's name is '{user_name}'. Address them by this name occasionally. Do NOT make up a name for the user."
-    system_prompt = base_prompt + user_name_instruction
+    
+    # Language instruction - MUST be very strong to override conversation history
+    language_instruction = ""
+    if request.language and request.language != "English":
+        language_instruction = f"\n\n🚨 CRITICAL LANGUAGE OVERRIDE 🚨\nYou MUST respond ONLY in {request.language} language, regardless of what language was used in previous messages. The user has explicitly selected {request.language} as their preferred language. ALL your responses from this point forward MUST be in {request.language}. Do NOT use English unless the selected language is English. If 'Hinglish' is selected, use a natural mix of Hindi and English as spoken in informal Indian conversation (use Roman/Latin script, not Devanagari)."
+
+    system_prompt = base_prompt + user_name_instruction + persona_instruction + language_instruction
 
     if not GEMINI_API_KEY:
         return {"response": "Gemini API key not configured. Please check .env file."}
@@ -608,7 +671,7 @@ Your goal is to sound like a real person who deeply understands male dating dyna
         
         # Initialize model with system instruction
         model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
+            model_name="gemini-2.5-flash",
             system_instruction=system_prompt
         )
         
@@ -625,21 +688,27 @@ Your goal is to sound like a real person who deeply understands male dating dyna
         # Prepare content parts for the current message
         content_parts = []
         
-        # Add files to context if this is the first message or if we want to always include them
-        if len(history_messages) == 0:  # First message, include PDFs for context
-            for file_record in stored_files:
-                try:
-                    file_obj = genai.get_file(file_record.file_id)
-                    content_parts.append(file_obj)
-                except Exception as e:
-                    print(f"Error fetching file {file_record.file_id}: {e}")
-                    continue
+        # Always include PDFs for context on every query
+        for file_record in stored_files:
+            try:
+                file_obj = genai.get_file(file_record.file_id)
+                content_parts.append(file_obj)
+            except Exception as e:
+                print(f"Error fetching file {file_record.file_id}: {e}")
+                continue
         
         # Add user message
         content_parts.append(request.message)
         
-        # Generate response with context
-        response = chat.send_message(content_parts)
+        # Generate response with context (run in executor to avoid blocking)
+        import asyncio
+        from functools import partial
+        
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            partial(chat.send_message, content_parts)
+        )
         ai_response_text = response.text
         
         # Save user message
@@ -885,7 +954,7 @@ Do not include markdown formatting (like ```json) in the response, just the raw 
 
 
         # Initialize Gemini model with vision capability
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         import base64
         
@@ -899,8 +968,24 @@ Do not include markdown formatting (like ```json) in the response, just the raw 
         # Add all image parts
         prompt_parts.extend(image_parts)
         
-        # Generate analysis with image(s)
-        response = model.generate_content(prompt_parts)
+        # Run synchronous generation in a thread pool to avoid blocking the event loop
+        import asyncio
+        from functools import partial
+        
+        loop = asyncio.get_event_loop()
+        try:
+            response = await loop.run_in_executor(
+                None, 
+                partial(model.generate_content, prompt_parts)
+            )
+        except Exception as e:
+            print(f"Gemini generation error: {e}")
+            raise HTTPException(status_code=500, detail="AI generation failed. The image might be unclear or violate safety policies.")
+
+        # Check for safety blocks or empty response
+        if not response.parts:
+            print(f"Safety ratings: {response.prompt_feedback}")
+            raise HTTPException(status_code=400, detail="AI refused to analyze this image due to safety filters. Please try a different image.")
         
         # Parse the response to extract assessment, reply, and reasoning
         full_response = response.text
@@ -1070,7 +1155,7 @@ Keep your response focused and actionable.
     try:
         # Initialize model - ensure API key is configured globally or passed here if needed
         # Assuming genai.configure(api_key=...) is called at startup
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Run synchronous generation in a thread pool to avoid blocking the event loop
         import asyncio
@@ -1113,7 +1198,7 @@ CRITICAL SAFETY & SCOPE RULES:
 - If a question is truly out of scope or harmful, respond with: "I'm specifically designed to help with dating and relationship challenges. I can't assist with that topic, but I'm here if you have questions about attraction, communication, or relationship dynamics."
 
 IMPORTANT INSTRUCTIONS:
-- Keep responses concise and readable (150-200 words maximum).
+- Keep responses concise and readable (200-300 words maximum).
 - Use natural paragraph breaks for readability.
 - You MAY use bullet points (with hyphens) when listing action steps or key points.
 - Do NOT use bold text or headers.
@@ -1124,8 +1209,7 @@ IMPORTANT INSTRUCTIONS:
 - If a concept comes from a source, rephrase it naturally without attribution (e.g., instead of "the concept of XYZ," say "I've found that...").
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, not just WHAT to do.
-- Focus on: attraction psychology
-- ALWAYS end with a follow-up question to continue the conversation.
+- Focus on: behavioural psychology, evolutionary psychology, and attraction psychology.
 
 Your goal is to sound like a real person who deeply understands male dating dynamics, not a robot giving one-liners."""
 
@@ -1160,9 +1244,19 @@ Your goal is to sound like a real person who deeply understands female dating dy
     # Select prompt based on gender preference
     base_prompt = male_coach_prompt if gender_preference == "male" else female_coach_prompt
 
+    # Persona overrides
+    persona_prompts = {
+        "drill_sergeant": "\n\nPERSONA OVERRIDE: You are a TOUGH LOVE 'Drill Sergeant' type coach. Be brutally honest. Stop the user from making excuses. Use short, punchy sentences. Don't coddle them. Focus on discipline and action. Your tone is commanding.",
+        "wingman": "\n\nPERSONA OVERRIDE: You are an enthusiastic 'Wingman'. Use casual, bro-like language (like 'dude', 'bro', 'man'). Be hype and supportive. Focus on boosting their confidence and giving practical, 'street-smart' advice. Your tone is high-energy.",
+        "therapist": "\n\nPERSONA OVERRIDE: You are an Empathetic Relationship Therapist. Focus on the emotional undercurrents, anxiety, and connection. Be gentle, validating, and ask deep questions about how they feel. Use softer language. Your tone is calming."
+    }
+    
+    # Apply persona if selected (and not standard)
+    persona_instruction = persona_prompts.get(request.persona, "")
+
     # Add instruction to NOT use a name for guests
     name_instruction = "\n\nIMPORTANT: You are chatting with a guest user whose name is unknown. Do NOT address them by any personal name. Do NOT make up a name. You can address them directly without a name."
-    system_prompt = base_prompt + name_instruction
+    system_prompt = base_prompt + name_instruction + persona_instruction
 
     if not GEMINI_API_KEY:
         return {"response": "Gemini API key not configured. Please check .env file."}
@@ -1175,7 +1269,7 @@ Your goal is to sound like a real person who deeply understands female dating dy
         
         # Initialize model with system instruction
         model = genai.GenerativeModel(
-            model_name="gemini-2.0-flash",
+            model_name="gemini-2.5-flash",
             system_instruction=system_prompt
         )
         
@@ -1194,15 +1288,14 @@ Your goal is to sound like a real person who deeply understands female dating dy
         # Prepare content parts for current message
         content_parts = []
         
-        # Add files to context if this is the first message
-        if len(chat_history) == 0:  # First message, include PDFs for context
-            for file_record in stored_files:
-                try:
-                    file_obj = genai.get_file(file_record.file_id)
-                    content_parts.append(file_obj)
-                except Exception as e:
-                    print(f"Error fetching file {file_record.file_id}: {e}")
-                    continue
+        # Always include PDFs for context on every query
+        for file_record in stored_files:
+            try:
+                file_obj = genai.get_file(file_record.file_id)
+                content_parts.append(file_obj)
+            except Exception as e:
+                print(f"Error fetching file {file_record.file_id}: {e}")
+                continue
         
         # Add user message
         content_parts.append(request.message)
@@ -1227,10 +1320,12 @@ Your goal is to sound like a real person who deeply understands female dating dy
 @app.post("/guest-analyze")
 async def guest_analyze_screenshot(
     file: UploadFile = File(...), 
-    user_color: str = "blue",
-    other_color: str = "gray",
-    user_gender: str = "male",
-    other_gender: str = "female"
+    user_color: str = Query("blue"),
+    other_color: str = Query("gray"),
+    user_gender: str = Query("male"),
+    other_gender: str = Query("female"),
+    goal: str = Query("Build attraction"),
+    language: str = Query("English")
 ):
     if not GEMINI_API_KEY:
         return {"error": "Gemini API key not configured"}
@@ -1259,13 +1354,16 @@ async def guest_analyze_screenshot(
         # Create system prompt for screenshot analysis
         analysis_prompt = f"""You are an expert dating coach analyzing text message screenshots.
 
+USER'S CONVERSATION GOAL: {goal}
+IMPORTANT: Tailor your assessment and reply suggestions specifically to help them achieve this goal.
+
 ANALYSIS TASK:
 1. Read the conversation in the screenshot
 2. Identify who sent the LAST message in the conversation
 3. Assess the power dynamics and "frame" (who is chasing whom)
 4. Identify signs of attraction, interest level, or red flags
 5. Determine the appropriate next action based on conversation state
-6. Provide context-aware reply options
+6. Provide context-aware reply options that align with the goal: {goal}
 
 CRITICAL RULES:
 - Keep your analysis concise (150-200 words total)
@@ -1285,18 +1383,19 @@ Return a JSON object with the following keys:
     * If the user should WAIT before texting, clearly state this WARNING at the start: "⚠️ DO NOT TEXT YET - Wait for her response first."
     * Explain WHY waiting is strategically important
     * Then provide your full analysis of power dynamics, attraction signals, and what's happening
+    * Keep assessment and reasoning in ENGLISH
 - "replies": A list of 3 distinct reply options with different TONES/STYLES. Each should be an actual text message they could send:
     * Use descriptive types like: "Playful/Teasing", "Direct/Confident", "Mysterious/Intrigue", "Challenge", "Validation-Withdrawal", "Cocky-Funny", etc.
     * Each option must have:
       - "type": The tone/style of the reply (e.g., "Playful/Ambiguous", "Direct/Challenge", "Frame Control")
-      - "text": The ACTUAL message text to copy and send
-- "reasoning": Brief explanation of the overall strategy behind these reply styles
+      - "text": The ACTUAL message text to copy and send - WRITE THIS IN {language.upper()}
+- "reasoning": Brief explanation of the overall strategy behind these reply styles (in ENGLISH)
 
 Do not include markdown formatting (like ```json) in the response, just the raw JSON string.
 """
 
         # Initialize Gemini model with vision capability
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Create the image part for Gemini
         import base64
@@ -1309,9 +1408,25 @@ Do not include markdown formatting (like ```json) in the response, just the raw 
             "data": image_data
         }
         
-        # Generate analysis with image
-        response = model.generate_content([analysis_prompt, image_part])
+        # Run synchronous generation in a thread pool to avoid blocking the event loop
+        import asyncio
+        from functools import partial
         
+        loop = asyncio.get_event_loop()
+        try:
+            response = await loop.run_in_executor(
+                None, 
+                partial(model.generate_content, [analysis_prompt, image_part])
+            )
+        except Exception as e:
+            print(f"Gemini generation error: {e}")
+            raise HTTPException(status_code=500, detail="AI generation failed. The image might be unclear or violate safety policies.")
+
+        # Check for safety blocks or empty response
+        if not response.parts:
+            print(f"Safety ratings: {response.prompt_feedback}")
+            raise HTTPException(status_code=400, detail="AI refused to analyze this image due to safety filters. Please try a different image.")
+            
         # Parse the response to extract assessment, reply, and reasoning
         full_response = response.text
         
@@ -1321,6 +1436,9 @@ Do not include markdown formatting (like ```json) in the response, just the raw 
         
         try:
             parsed_response = json.loads(cleaned_response)
+            
+            # Debug: print the parsed response
+            print(f"Parsed response: {parsed_response}")
             
             # Handle both old (single reply) and new (multiple replies) formats
             replies = parsed_response.get("replies", [])
@@ -1334,21 +1452,37 @@ Do not include markdown formatting (like ```json) in the response, just the raw 
             if not replies and "reply" in parsed_response:
                 replies = [{"type": "Recommended", "text": parsed_response["reply"]}]
                 
-            # Final fallback if no replies found
-            if not replies:
-                replies = [{"type": "Analysis", "text": "Please check the assessment above for advice."}]
+            # Final fallback if no replies found - extract from assessment or regenerate
+            if not replies or len(replies) == 0:
+                print("WARNING: No replies in AI response, checking assessment...")
+                assessment = parsed_response.get("assessment", "")
+                # If assessment mentions waiting, create appropriate reply
+                if "DO NOT TEXT" in assessment or "WAIT" in assessment.upper():
+                    replies = [{"type": "Strategy", "text": "Wait for their response before texting again."}]
+                else:
+                    # Generate generic playful reply as fallback
+                    replies = [
+                        {"type": "Playful/Teasing", "text": "Haha fair enough 😏"},
+                        {"type": "Direct/Confident", "text": "Alright, let's make it happen then"},
+                        {"type": "Mysterious/Intrigue", "text": "We'll see about that 👀"}
+                    ]
                 
             return {
                 "assessment": parsed_response.get("assessment", full_response),
                 "replies": replies,
-                "reasoning": parsed_response.get("reasoning", "Check assessment")
+                "reasoning": parsed_response.get("reasoning", "Strategy based on conversation dynamics")
             }
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             # Fallback if JSON parsing fails
+            print(f"JSON decode error: {e}")
+            print(f"Raw response: {cleaned_response}")
             return {
                 "assessment": full_response,
-                "replies": [{"type": "Error", "text": "See assessment above"}],
-                "reasoning": "See assessment above"
+                "replies": [
+                    {"type": "Playful", "text": "Haha that's interesting 😏"},
+                    {"type": "Direct", "text": "I see what you mean"}
+                ],
+                "reasoning": "Generic replies due to parsing error"
             }
     
     except Exception as e:

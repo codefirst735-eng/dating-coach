@@ -159,6 +159,87 @@
             }
         }
 
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .loading-card {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d0000 100%);
+            border: 2px solid #d00000;
+            border-radius: 16px;
+            padding: 2.5rem 3rem;
+            text-align: center;
+            box-shadow: 0 10px 50px rgba(208, 0, 0, 0.3),
+                0 0 30px rgba(208, 0, 0, 0.2);
+            animation: scaleIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            min-width: 280px;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(208, 0, 0, 0.2);
+            border-top: 4px solid #d00000;
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            color: #ffffff;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .loading-subtext {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         @media (max-width: 768px) {
             .chat-container {
                 height: calc(100dvh - 70px);
@@ -172,8 +253,8 @@
 
             .chat-history {
                 padding: 1rem !important;
-                padding-bottom: 8rem !important;
-                /* Increased padding for input area */
+                padding-bottom: 14rem !important;
+                /* Extra padding for controls + input area on mobile */
             }
 
             .message {
@@ -206,6 +287,35 @@
                 font-size: 0.875rem;
             }
 
+            /* Custom styling for select dropdown on mobile */
+            #coachPersona {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                background-color: #1a1a1a !important;
+                color: #ffffff !important;
+                border: 1px solid #6c757d !important;
+                padding: 0.6rem 2rem 0.6rem 0.75rem !important;
+                font-size: 0.75rem !important;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+                background-repeat: no-repeat !important;
+                background-position: right 0.5rem center !important;
+                background-size: 12px !important;
+            }
+
+            /* Style the dropdown options on mobile */
+            #coachPersona option {
+                background-color: #1a1a1a;
+                color: #ffffff;
+                padding: 1rem;
+            }
+
+            /* Gender toggle buttons on mobile */
+            .btn-group label {
+                font-size: 0.75rem !important;
+                padding: 0.6rem 0.5rem !important;
+            }
+
             .scroll-hint {
                 bottom: 85px;
                 font-size: 0.75rem;
@@ -231,30 +341,103 @@
         <div class="scroll-hint" id="scrollHint">Scroll down to type your message</div>
         <div class="typing-indicator px-4" id="typingIndicator">Coach is analyzing...</div>
 
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-card">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Coach is analyzing...</div>
+                <div class="loading-subtext">Processing your situation</div>
+            </div>
+        </div>
+
         <div class="chat-input-area">
             <!-- Gender Toggle - Inside fixed input area -->
-            <div class="pb-3" id="genderToggleContainer" style="display: none;">
-                <div class="btn-group w-100" role="group">
-                    <input type="radio" class="btn-check" name="genderPreference" id="maleCoach" value="male" checked>
-                    <label class="btn btn-outline-primary" for="maleCoach">Coach for Men</label>
+            <!-- Settings Row -->
+            <!-- Controls Row -->
+            <div class="row g-2 mb-3" id="chatControls">
+                <!-- Gender Toggle -->
+                <div class="col-12 col-md-6" id="genderToggleContainer">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="genderPreference" id="genderMale" value="male"
+                            checked>
+                        <label class="btn btn-outline-primary rounded-0 py-2 text-uppercase fw-bold ls-1"
+                            for="genderMale" style="font-size: 0.8rem;">
+                            For Men
+                        </label>
 
-                    <input type="radio" class="btn-check" name="genderPreference" id="femaleCoach" value="female">
-                    <label class="btn btn-outline-danger" for="femaleCoach">Coach for Women</label>
+                        <input type="radio" class="btn-check" name="genderPreference" id="genderFemale" value="female">
+                        <label class="btn btn-outline-danger rounded-0 py-2 text-uppercase fw-bold ls-1"
+                            for="genderFemale" style="font-size: 0.8rem;">
+                            For Women
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Persona Select -->
+                <div class="col-12 col-md-6">
+                    <select
+                        class="form-select bg-dark text-white border-secondary rounded-0 text-uppercase text-center py-2"
+                        id="coachPersona" style="font-size: 0.8rem; letter-spacing: 0.5px; height: 100%;">
+                        <option value="standard">Standard Coach</option>
+                        <option value="drill_sergeant">Drill Sergeant</option>
+                        <option value="wingman">The Wingman</option>
+                        <option value="therapist">Relationship Therapist</option>
+                    </select>
                 </div>
             </div>
 
-            <form id="chatForm" class="d-flex gap-2">
+            <!-- Input Form -->
+            <form id="chatForm" class="d-flex gap-2 align-items-center">
                 <input type="text" id="userInput"
                     class="form-control form-control-lg bg-dark text-white border-secondary rounded-0"
-                    placeholder="Describe your situation..." required autocomplete="off">
-                <button type="submit" class="btn btn-danger btn-lg rounded-0 px-4 fw-bold">SEND</button>
+                    placeholder="Describe your situation..." required autocomplete="off" style="font-size: 1rem;">
 
+                <button type="button" id="voiceBtn"
+                    class="btn btn-outline-light btn-lg rounded-0 px-3 d-flex align-items-center justify-content-center"
+                    style="display: none; height: 48px; width: 48px;" title="Hold to Speak">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                        class="bi bi-mic-fill" viewBox="0 0 16 16">
+                        <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z" />
+                        <path
+                            d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z" />
+                    </svg>
+                </button>
+
+                <button type="submit" class="btn btn-danger btn-lg rounded-0 px-3 fw-bold d-flex align-items-center"
+                    style="height: 48px;">
+                    <span class="d-none d-md-inline">SEND</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                        class="bi bi-send-fill d-md-none" viewBox="0 0 16 16">
+                        <path
+                            d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576 6.636 10.07Zm6.787-8.201L1.591 6.602l4.339 2.76 7.494-7.493Z" />
+                    </svg>
+                </button>
+
+                <!-- Options Dropdown -->
                 <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-lg rounded-0" type="button" data-bs-toggle="dropdown"
-                        aria-expanded="false">
+                    <button
+                        class="btn btn-outline-secondary btn-lg rounded-0 d-flex align-items-center justify-content-center"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                        style="height: 48px; width: 48px;">
                         &#8942;
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark shadow-lg border-secondary"
+                        style="min-width: 200px;">
+                        <li>
+                            <h6 class="dropdown-header text-uppercase small text-white-50" style="letter-spacing: 1px;">
+                                Output Language</h6>
+                        </li>
+                        <li><a class="dropdown-item language-option active" href="#" data-lang="English">🇺🇸
+                                English</a></li>
+                        <li><a class="dropdown-item language-option" href="#" data-lang="Hinglish">🇮🇳 Hinglish</a>
+                        </li>
+                        <li><a class="dropdown-item language-option" href="#" data-lang="Hindi">🇮🇳 Hindi</a></li>
+                        <li><a class="dropdown-item language-option" href="#" data-lang="Spanish">🇪🇸 Spanish</a></li>
+                        <li><a class="dropdown-item language-option" href="#" data-lang="French">🇫🇷 French</a></li>
+                        <li><a class="dropdown-item language-option" href="#" data-lang="Italian">🇮🇹 Italian</a></li>
+                        <li>
+                            <div class="dropdown-divider border-secondary"></div>
+                        </li>
                         <li><a class="dropdown-item text-danger" href="#" id="clearHistoryOption">Clear Chat History</a>
                         </li>
                     </ul>
@@ -263,8 +446,8 @@
         </div>
     </div>
 
-    <!-- Footer Component -->
-    <div id="footer-placeholder"></div>
+    <!-- Footer Component - Removed for cleaner UI
+    <div id="footer-placeholder"></div> -->
 
     <script src="js/components.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
@@ -410,8 +593,8 @@
 
         // Gender preference toggle
         const genderToggleContainer = document.getElementById('genderToggleContainer');
-        const maleCoachRadio = document.getElementById('maleCoach');
-        const femaleCoachRadio = document.getElementById('femaleCoach');
+        const genderMaleRadio = document.getElementById('genderMale');
+        const genderFemaleRadio = document.getElementById('genderFemale');
 
         genderToggleContainer.style.display = 'block';
 
@@ -425,9 +608,9 @@
                     if (response.ok) {
                         const userData = await response.json();
                         if (userData.gender_preference === 'female') {
-                            femaleCoachRadio.checked = true;
+                            genderFemaleRadio.checked = true;
                         } else {
-                            maleCoachRadio.checked = true;
+                            genderMaleRadio.checked = true;
                         }
                     }
                 } catch (error) {
@@ -459,14 +642,14 @@
                 }
             }
 
-            maleCoachRadio.addEventListener('change', () => {
-                if (maleCoachRadio.checked) {
+            genderMaleRadio.addEventListener('change', () => {
+                if (genderMaleRadio.checked) {
                     updateGenderPreference('male');
                 }
             });
 
-            femaleCoachRadio.addEventListener('change', () => {
-                if (femaleCoachRadio.checked) {
+            genderFemaleRadio.addEventListener('change', () => {
+                if (genderFemaleRadio.checked) {
                     updateGenderPreference('female');
                 }
             });
@@ -474,9 +657,9 @@
             // Guest user - load from localStorage and save to localStorage
             const savedGenderPreference = localStorage.getItem('guest_gender_preference') || 'male';
             if (savedGenderPreference === 'female') {
-                femaleCoachRadio.checked = true;
+                genderFemaleRadio.checked = true;
             } else {
-                maleCoachRadio.checked = true;
+                genderMaleRadio.checked = true;
             }
 
             function updateGuestGenderPreference(gender) {
@@ -486,17 +669,40 @@
                 loadChatHistory(gender);
             }
 
-            maleCoachRadio.addEventListener('change', () => {
-                if (maleCoachRadio.checked) {
+            genderMaleRadio.addEventListener('change', () => {
+                if (genderMaleRadio.checked) {
                     updateGuestGenderPreference('male');
                 }
             });
 
-            femaleCoachRadio.addEventListener('change', () => {
-                if (femaleCoachRadio.checked) {
+            genderFemaleRadio.addEventListener('change', () => {
+                if (genderFemaleRadio.checked) {
                     updateGuestGenderPreference('female');
                 }
             });
+
+            // Persona Visual Feedback
+            const coachPersona = document.getElementById('coachPersona');
+            function updatePersonaStyle() {
+                const persona = coachPersona.value;
+                // Reset basic border
+                coachPersona.style.borderColor = '';
+                coachPersona.style.boxShadow = '';
+
+                if (persona === 'drill_sergeant') {
+                    coachPersona.style.borderColor = '#dc3545'; // danger
+                    coachPersona.style.boxShadow = '0 0 5px rgba(220, 53, 69, 0.5)';
+                } else if (persona === 'wingman') {
+                    coachPersona.style.borderColor = '#0dcaf0'; // info
+                    coachPersona.style.boxShadow = '0 0 5px rgba(13, 202, 240, 0.5)';
+                } else if (persona === 'therapist') {
+                    coachPersona.style.borderColor = '#198754'; // success
+                    coachPersona.style.boxShadow = '0 0 5px rgba(25, 135, 84, 0.5)';
+                } else {
+                    coachPersona.style.borderColor = '#6c757d'; // secondary
+                }
+            }
+            coachPersona.addEventListener('change', updatePersonaStyle);
         }
 
         // Clear history button logic
@@ -544,6 +750,32 @@
             });
         }
 
+        // Language Selection Logic
+        let currentLanguage = localStorage.getItem('chat_language_preference') || 'English';
+
+        // Update UI to match stored preference
+        document.querySelectorAll('.language-option').forEach(item => {
+            if (item.getAttribute('data-lang') === currentLanguage) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                // Remove active from all
+                document.querySelectorAll('.language-option').forEach(el => el.classList.remove('active'));
+                // Add to click
+                e.currentTarget.classList.add('active');
+
+                // Update variable and storage
+                currentLanguage = e.currentTarget.getAttribute('data-lang');
+                localStorage.setItem('chat_language_preference', currentLanguage);
+
+                if (typeof showToast === 'function') showToast(`Output language set to ${currentLanguage}`, 'info');
+            });
+        });
+
         // Show guest status in initial message if applicable
         if (isGuest) {
             const queriesLeft = GUEST_QUERY_LIMIT - guestQueryCount;
@@ -570,9 +802,9 @@
             appendMessage('user', message);
             userInput.value = '';
 
-            // Show typing indicator
-            typingIndicator.style.display = 'block';
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+            // Show loading overlay
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.style.display = 'flex';
 
             try {
                 let endpoint, headers, body;
@@ -598,21 +830,31 @@
                         }
                     }
 
+                    // Get selected persona
+                    const persona = document.getElementById('coachPersona').value;
+
                     endpoint = `${API_BASE_URL}/guest-chat`;
                     headers = { 'Content-Type': 'application/json' };
                     body = JSON.stringify({
                         message: message,
                         gender_preference: guestGenderPreference,
-                        history: history
+                        history: history,
+                        persona: persona
                     });
                 } else {
                     // Authenticated endpoint
+                    const persona = document.getElementById('coachPersona').value;
+
                     endpoint = `${API_BASE_URL}/chat`;
                     headers = {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     };
-                    body = JSON.stringify({ message: message });
+                    body = JSON.stringify({
+                        message: message,
+                        persona: persona,
+                        language: currentLanguage
+                    });
                 }
 
                 const response = await fetch(endpoint, {
@@ -653,12 +895,12 @@
                     appendMessage('ai', data.response);
                 }
 
-                // Hide typing indicator
-                typingIndicator.style.display = 'none';
+                // Hide loading overlay
+                loadingOverlay.style.display = 'none';
 
             } catch (error) {
                 console.error('Error:', error);
-                typingIndicator.style.display = 'none';
+                loadingOverlay.style.display = 'none';
                 appendMessage('ai', 'Connection lost. The matrix is interfering. Try again.');
             }
         });
@@ -777,6 +1019,101 @@
                 console.error('Error saving guest message:', error);
             }
         }
+        // --- Voice Recording Logic ---
+        const voiceBtn = document.getElementById('voiceBtn');
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
+        // Show button if not guest
+        if (!isGuest) {
+            voiceBtn.style.display = 'block';
+        }
+
+        voiceBtn.addEventListener('click', async () => {
+            if (!isRecording) {
+                // Start Recording
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                    // Detect supported mime type
+                    let mimeType = 'audio/webm';
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+                    else if (MediaRecorder.isTypeSupported('audio/mpeg')) mimeType = 'audio/mpeg'; // Unlikely for recorder
+
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = async () => {
+                        // Create Blob
+                        const audioBlob = new Blob(audioChunks, { type: mimeType });
+
+                        // Change UI to loading
+                        userInput.placeholder = "Transcribing audio...";
+                        userInput.disabled = true;
+                        voiceBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                        // Create FormData
+                        const formData = new FormData();
+                        formData.append('file', audioBlob, 'recording' + (mimeType === 'audio/mp4' ? '.m4a' : '.webm'));
+
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/transcribe`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: formData
+                            });
+
+                            if (!response.ok) {
+                                throw new Error('Transcription failed');
+                            }
+
+                            const data = await response.json();
+                            userInput.value = data.text;
+                            userInput.focus();
+
+                        } catch (error) {
+                            console.error('Transcription error:', error);
+                            showToast('Failed to transcribe audio. Please try again.', 'error');
+                        } finally {
+                            // Reset UI
+                            userInput.placeholder = "Describe your situation...";
+                            userInput.disabled = false;
+                            voiceBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-mic-fill" viewBox="0 0 16 16"><path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/><path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/></svg>';
+                            voiceBtn.classList.remove('btn-danger');
+                            voiceBtn.classList.add('btn-outline-light');
+                        }
+
+                        // Stop all tracks
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+
+                    // UI Updates for Recording
+                    voiceBtn.classList.remove('btn-outline-light');
+                    voiceBtn.classList.add('btn-danger', 'pulse-animation'); // Add pulse class if you have it
+                    showToast("Recording... Click mic to stop.", "info");
+
+                } catch (err) {
+                    console.error("Error accessing microphone:", err);
+                    showToast("Could not access microphone. Please check permissions.", "error");
+                }
+            } else {
+                // Stop Recording
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                    isRecording = false;
+                }
+            }
+        });
     </script>
 </body>
 

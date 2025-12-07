@@ -26,17 +26,68 @@
   <div id="header-placeholder"></div>
 
   <!-- Hero Section -->
-  <header class="hero-section d-flex align-items-center text-center">
+  <!-- Hero Section -->
+  <header class="hero-section d-flex align-items-center">
     <div class="container position-relative z-2">
-      <h1 class="display-1 fw-black text-uppercase mb-3 glitch-effect hero-title">Master Your<br>Relationships</h1>
-      <p class="lead mb-5 text-white-50 mx-auto hero-subtitle" style="max-width: 600px;">
-        Understand the psychology of connection. Communicate with confidence. Build meaningful relationships based on
-        mutual respect and understanding.
-      </p>
-      <div class="d-flex justify-content-center gap-3 hero-buttons">
-        <a href="chat.html" class="btn btn-danger btn-lg rounded-0 px-5 fw-bold text-uppercase">Start AI Coaching</a>
-        <a href="screenshot-analysis.html"
-          class="btn btn-outline-light btn-lg rounded-0 px-5 fw-bold text-uppercase">Analyze Your Texts</a>
+      <div class="row align-items-center">
+        <!-- Text Content -->
+        <div class="col-lg-6 text-center text-lg-start mb-5 mb-lg-0">
+          <h1 class="display-1 fw-black text-uppercase mb-3 glitch-effect hero-title">Master Your<br>Relationships</h1>
+          <p class="lead mb-4 text-white-50 hero-subtitle">
+            Understand the psychology of connection. Communicate with confidence. Build meaningful relationships based
+            on
+            mutual respect and understanding.
+          </p>
+          <div class="d-flex justify-content-center justify-content-lg-start gap-3 hero-buttons">
+            <a href="chat.html" class="btn btn-danger btn-lg rounded-0 px-4 px-md-5 fw-bold text-uppercase">Start AI
+              Coaching</a>
+            <a href="screenshot-analysis.html"
+              class="btn btn-outline-light btn-lg rounded-0 px-4 px-md-5 fw-bold text-uppercase">Analyze Your Texts</a>
+          </div>
+        </div>
+
+        <!-- Image Carousel -->
+        <div class="col-lg-6">
+          <div id="heroCarousel" class="carousel slide carousel-fade border border-secondary" data-bs-ride="carousel">
+            <div class="carousel-indicators">
+              <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="0" class="active"
+                aria-current="true" aria-label="Slide 1"></button>
+              <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+              <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+            </div>
+            <div class="carousel-inner">
+              <div class="carousel-item active">
+                <img src="assets/carousel-1.png" class="d-block w-100" alt="Meaningful Connection">
+                <div class="carousel-caption d-none d-md-block bg-black bg-opacity-50 p-2">
+                  <h5 class="fw-bold text-uppercase">Real Connection</h5>
+                  <p class="small">Build relationships that last.</p>
+                </div>
+              </div>
+              <div class="carousel-item">
+                <img src="assets/carousel-2.png" class="d-block w-100" alt="Psychology of Attraction">
+                <div class="carousel-caption d-none d-md-block bg-black bg-opacity-50 p-2">
+                  <h5 class="fw-bold text-uppercase">Psychology Based</h5>
+                  <p class="small">Science, not guessing.</p>
+                </div>
+              </div>
+              <div class="carousel-item">
+                <img src="assets/carousel-3.png" class="d-block w-100" alt="Confidence">
+                <div class="carousel-caption d-none d-md-block bg-black bg-opacity-50 p-2">
+                  <h5 class="fw-bold text-uppercase">Unshakeable Confidence</h5>
+                  <p class="small">Become your best self.</p>
+                </div>
+              </div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+              <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+              <span class="carousel-control-next-icon" aria-hidden="true"></span>
+              <span class="visually-hidden">Next</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="hero-overlay"></div>
@@ -48,7 +99,7 @@
       <div class="row align-items-center">
         <div class="col-lg-6 mb-5 mb-lg-0">
           <h2 class="display-4 fw-bold text-uppercase mb-4 philosophy-title">The Science of <span
-              class="text-danger">Connection</span></h2>
+              class="text-pink">Connection</span></h2>
           <div class="border-start border-danger border-4 ps-4 philosophy-content">
             <p class="lead text-light">Healthy relationships aren't about games. They're about understanding human
               behavior.</p>
@@ -114,7 +165,7 @@
           </div>
         </div>
         <div class="col-lg-7 order-lg-1 mb-3 mb-lg-0">
-          <h2 class="display-5 fw-bold text-uppercase mb-3">Understand the <span class="text-danger">Subtext.</span>
+          <h2 class="display-5 fw-bold text-uppercase mb-3">Understand the <span class="text-pink">Subtext.</span>
           </h2>
           <p class="lead text-light mb-4">Miscommunication kills attraction. Our AI Text Analyzer reads between the
             lines to help you understand the emotional context.</p>
@@ -131,72 +182,171 @@
     </div>
   </section>
 
+  <!-- Visual Break / Lifestyle Section -->
+  <section class="py-5 bg-black overflow-hidden">
+    <div class="container py-4">
+      <div class="row g-5 align-items-center">
+        <div class="col-md-6 text-center">
+          <img src="assets/feature-1.png" class="img-fluid border border-secondary shadow-lg" style="max-width: 80%;"
+            alt="Texting Context">
+        </div>
+        <div class="col-md-6 text-center text-md-start">
+          <h3 class="display-5 fw-bold text-uppercase mb-4">Don't Leave It to <span class="text-danger">Chance</span>
+          </h3>
+          <p class="lead text-white-50 mb-5">
+            Attraction isn't random. It's a sequence of correct moves. One wrong text can kill the vibe. One right text
+            can ignite it.
+          </p>
+          <div class="text-center text-md-end">
+            <img src="assets/feature-2.png" class="img-fluid border border-secondary shadow-lg" style="max-width: 80%;"
+              alt="Positive Outcome">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Coaching Section -->
   <section id="coaching" class="py-5 bg-dark-gradient">
     <div class="container py-5">
-      <div class="text-center mb-5">
+      <div class="text-center mb-4">
         <h2 class="display-4 fw-bold text-uppercase">Plans</h2>
-        <p class="text-danger fw-bold tracking-widest">CHOOSE YOUR PATH</p>
+        <p class="text-pink fw-bold tracking-widest">CHOOSE YOUR PATH</p>
       </div>
+
+      <!-- Toggle Switch for Weekly/Monthly -->
+      <div class="d-flex justify-content-center mb-5">
+        <div class="btn-group" role="group" aria-label="Billing Cycle">
+          <input type="radio" class="btn-check" name="billingCycle" id="billingWeekly" autocomplete="off" checked
+            onchange="updatePricing()">
+          <label class="btn btn-outline-danger rounded-0 px-4 py-2 fw-bold text-uppercase"
+            for="billingWeekly">Weekly</label>
+
+          <input type="radio" class="btn-check" name="billingCycle" id="billingMonthly" autocomplete="off"
+            onchange="updatePricing()">
+          <label class="btn btn-outline-danger rounded-0 px-4 py-2 fw-bold text-uppercase"
+            for="billingMonthly">Monthly</label>
+        </div>
+      </div>
+
       <div class="row g-4 justify-content-center">
-        <!-- Card 1: Basic -->
+        <!-- Card 1: Basic (The Sleeper) -->
         <div class="col-lg-4 col-md-6">
           <div class="card bg-black border-secondary h-100 pricing-card">
             <div class="card-body p-5 d-flex flex-column">
-              <h3 class="card-title fw-bold text-white">Basic</h3>
-              <p class="text-white-50 mb-4">Start your journey.</p>
+              <h3 class="card-title fw-bold text-white">The Sleeper</h3>
+              <p class="text-white-50 mb-4">Dip your toes in the water.</p>
               <h2 class="display-5 fw-bold text-danger mb-4">Free</h2>
               <ul class="list-unstyled text-white-50 mb-5 flex-grow-1">
-                <li class="mb-3">✓ <strong>10 AI Coach Queries</strong></li>
-                <li class="mb-3">✓ Basic Relationship Principles</li>
-                <li class="mb-3">✓ Limited Access</li>
+                <li class="mb-3">✓ <strong>10 AI Queries / Day</strong></li>
+                <li class="mb-3">✓ <strong>5 Screenshot Analyses / Day</strong></li>
+                <li class="mb-3">✓ Standard Coach Persona</li>
+                <li class="mb-3">✓ Basic Text Analysis</li>
               </ul>
-              <button onclick="selectPlan('Basic')"
-                class="btn btn-outline-light w-100 rounded-0 fw-bold text-uppercase">Start Free</button>
+              <button onclick="selectPlan('Sleeper')"
+                class="btn btn-outline-light w-100 rounded-0 fw-bold text-uppercase">Stay Free</button>
             </div>
           </div>
         </div>
-        <!-- Card 2: Pro -->
+
+        <!-- Card 2: Pro (The Initiate) -->
         <div class="col-lg-4 col-md-6">
           <div class="card bg-black border-secondary h-100 pricing-card">
             <div class="card-body p-5 d-flex flex-column">
-              <h3 class="card-title fw-bold text-white">Pro</h3>
-              <p class="text-white-50 mb-4">For serious growth.</p>
-              <h2 class="display-5 fw-bold text-danger mb-4">₹200<span class="fs-6 text-white-50">/week</span></h2>
+              <h3 class="card-title fw-bold text-white">The Initiate</h3>
+              <p class="text-white-50 mb-4">Serious about results.</p>
+              <!-- Price Container -->
+              <h2 class="display-5 fw-bold text-pink mb-4" id="price-pro">
+                --
+                <span class="fs-4 text-white-50" id="period-pro">/week</span>
+              </h2>
               <ul class="list-unstyled text-white-50 mb-5 flex-grow-1">
-                <li class="mb-3">✓ <strong>100 Queries / Week</strong></li>
-                <li class="mb-3">✓ Advanced Relationship Dynamics</li>
-                <li class="mb-3">✓ Texting Analysis</li>
-                <li class="mb-3">✓ Community Access</li>
+                <li class="mb-3 text-white">✓ <strong>50 AI Queries / Day</strong></li>
+                <li class="mb-3 text-white">✓ <strong>25 Screenshot Analyses / Day</strong></li>
+                <li class="mb-3">✓ <strong>Unlock:</strong> Wingman & Drill Sergeant</li>
+                <li class="mb-3">✓ Voice-to-Text Input</li>
+                <li class="mb-3">✓ Multi-Language Support</li>
               </ul>
-              <button onclick="selectPlan('Pro')"
+              <button onclick="selectPlan('Initiate')"
                 class="btn btn-outline-light w-100 rounded-0 fw-bold text-uppercase">Start Pro</button>
             </div>
           </div>
         </div>
-        <!-- Card 3: Premium -->
+
+        <!-- Card 3: Premium (The Master) -->
         <div class="col-lg-4 col-md-6">
           <div class="card bg-dark border-danger h-100 pricing-card transform-scale">
             <div class="card-body p-5 d-flex flex-column">
               <div class="badge bg-danger text-uppercase mb-3 align-self-start rounded-0">Recommended</div>
-              <h3 class="card-title fw-bold text-white">Premium</h3>
-              <p class="text-white-50 mb-4">Total mastery.</p>
-              <h2 class="display-5 fw-bold text-danger mb-4">₹500<span class="fs-6 text-white-50">/week</span></h2>
+              <h3 class="card-title fw-bold text-white">The Master</h3>
+              <p class="text-white-50 mb-4">Total dominance.</p>
+              <!-- Price Container -->
+              <h2 class="display-5 fw-bold text-danger mb-4" id="price-premium">
+                --
+                <span class="fs-6 text-white-50" id="period-premium">/week</span>
+              </h2>
               <ul class="list-unstyled text-white-50 mb-5 flex-grow-1">
-                <li class="mb-3">✓ <strong>Unlimited AI Coach Queries</strong></li>
-                <li class="mb-3">✓ Advanced Psychology Models</li>
-                <li class="mb-3">✓ Real-time Scenario Simulation</li>
-                <li class="mb-3">✓ Priority Support</li>
-                <li class="mb-3">✓ Exclusive Content Library</li>
+                <li class="mb-3 text-white">✓ <strong>100 AI Queries / Day</strong></li>
+                <li class="mb-3 text-white">✓ <strong>100 Screenshot Analyses / Day</strong></li>
+                <li class="mb-3">✓ <strong>Unlock:</strong> All Personas (Inc. Therapist)</li>
+                <li class="mb-3">✓ Priority Response Time</li>
+                <li class="mb-3">✓ Early Access Features</li>
               </ul>
-              <button onclick="selectPlan('Premium')" class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase">Go
-                Unlimited</button>
+              <button onclick="selectPlan('Master')" class="btn btn-danger w-100 rounded-0 fw-bold text-uppercase">God
+                Mode</button>
             </div>
           </div>
         </div>
       </div>
     </div>
   </section>
+
+  <script>
+    // Pricing Logic
+    const pricing = {
+      IN: { // India
+        pro: { weekly: "₹49", monthly: "₹149" },
+        premium: { weekly: "₹99", monthly: "₹299" }
+      },
+      GLOBAL: { // Rest of World
+        pro: { weekly: "$2.99", monthly: "$7.99" },
+        premium: { weekly: "$4.99", monthly: "$12.99" }
+      }
+    };
+
+    let userRegion = 'GLOBAL'; // Default
+
+    function updatePricing() {
+      const isMonthly = document.getElementById('billingMonthly').checked;
+      const prices = pricing[userRegion];
+      const period = isMonthly ? '/mo' : '/week';
+
+      // Update Pro
+      const pricePro = document.getElementById('price-pro');
+      if (pricePro) {
+        pricePro.innerHTML = `
+                ${isMonthly ? prices.pro.monthly : prices.pro.weekly}<span class="fs-4 text-white-50">${period}</span>
+            `;
+      }
+
+      // Update Premium
+      const pricePremium = document.getElementById('price-premium');
+      if (pricePremium) {
+        pricePremium.innerHTML = `
+                ${isMonthly ? prices.premium.monthly : prices.premium.weekly}<span class="fs-6 text-white-50">${period}</span>
+            `;
+      }
+    }
+
+    // Detect user region based on timezone
+    document.addEventListener('DOMContentLoaded', () => {
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (timeZone.includes('Calcutta') || timeZone.includes('Kolkata') || timeZone.includes('Asia/Colombo')) {
+        userRegion = 'IN';
+      }
+      updatePricing();
+    });
+  </script>
 
   <!-- Footer Component -->
   <div id="footer-placeholder"></div>
