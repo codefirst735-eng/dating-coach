@@ -531,41 +531,78 @@ async def transcribe_audio(
     try:
         # Read file content
         content = await file.read()
+        print(f"DEBUG: Received audio file: {file.filename}, size: {len(content)} bytes, type: {file.content_type}")
         
-        # Save to temp file extension based on content type if possible, default to webm
+        # Save to temp file with extension based on content type
         ext = ".webm"
-        if file.content_type == "audio/mp4":
+        mime_type = file.content_type or "audio/webm"
+        
+        if file.content_type == "audio/mp4" or file.content_type == "audio/m4a":
             ext = ".m4a"
+            mime_type = "audio/mp4"
         elif file.content_type == "audio/mpeg":
             ext = ".mp3"
+            mime_type = "audio/mpeg"
         elif file.content_type == "audio/wav":
             ext = ".wav"
+            mime_type = "audio/wav"
+        elif file.content_type == "audio/ogg":
+            ext = ".ogg"
+            mime_type = "audio/ogg"
+            
+        print(f"DEBUG: Using extension {ext} and mime type {mime_type}")
             
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_audio:
             temp_audio.write(content)
             temp_audio_path = temp_audio.name
             
         try:
-            # Upload to Gemini
-            # genai.upload_file handles the upload. 
-            auth_file = genai.upload_file(temp_audio_path, mime_type=file.content_type or "audio/webm")
+            # Upload to Gemini using executor to avoid blocking
+            import asyncio
+            loop = asyncio.get_running_loop()
             
-            # Transcribe
+            print(f"DEBUG: Uploading file to Gemini...")
+            auth_file = await loop.run_in_executor(
+                None,
+                genai.upload_file,
+                temp_audio_path,
+                mime_type
+            )
+            print(f"DEBUG: File uploaded successfully: {auth_file.name}")
+            
+            # Transcribe using Gemini
             model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(["Transcribe the following audio exactly as spoken. Return only the text.", auth_file])
+            print(f"DEBUG: Generating transcription...")
             
-            if not response.text:
+            response = await loop.run_in_executor(
+                None,
+                model.generate_content,
+                ["Transcribe the following audio exactly as spoken. Return only the transcribed text, nothing else.", auth_file]
+            )
+            
+            print(f"DEBUG: Transcription complete")
+            
+            if not response or not response.text:
                 raise Exception("Empty response from AI")
                 
-            return {"text": response.text.strip()}
+            transcribed_text = response.text.strip()
+            print(f"DEBUG: Transcribed text: {transcribed_text[:100]}...")
+                
+            return {"text": transcribed_text}
+            
+        except Exception as inner_e:
+            print(f"ERROR in transcription process: {type(inner_e).__name__}: {str(inner_e)}")
+            raise
         finally:
             # Cleanup local temp file
             if os.path.exists(temp_audio_path):
                 os.remove(temp_audio_path)
+                print(f"DEBUG: Cleaned up temp file")
                 
     except Exception as e:
-        print(f"Transcription error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to transcribe audio: {str(e)}")
+        error_msg = f"Failed to transcribe audio: {type(e).__name__}: {str(e)}"
+        print(f"TRANSCRIPTION ERROR: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/chat")
 async def chat(request: ChatRequest, current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
