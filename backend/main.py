@@ -533,76 +533,81 @@ async def transcribe_audio(
         content = await file.read()
         print(f"DEBUG: Received audio file: {file.filename}, size: {len(content)} bytes, type: {file.content_type}")
         
-        # Save to temp file with extension based on content type
-        ext = ".webm"
-        mime_type = file.content_type or "audio/webm"
+        # Validate file size (max 20MB for safety)
+        if len(content) > 20 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Audio file too large (max 20MB)")
         
-        if file.content_type == "audio/mp4" or file.content_type == "audio/m4a":
-            ext = ".m4a"
+        if len(content) < 100:
+            raise HTTPException(status_code=400, detail="Audio file too small or empty")
+        
+        # Determine mime type
+        mime_type = file.content_type or "audio/webm"
+        if "mp4" in mime_type or "m4a" in mime_type:
             mime_type = "audio/mp4"
-        elif file.content_type == "audio/mpeg":
-            ext = ".mp3"
+        elif "mpeg" in mime_type or "mp3" in mime_type:
             mime_type = "audio/mpeg"
-        elif file.content_type == "audio/wav":
-            ext = ".wav"
+        elif "wav" in mime_type:
             mime_type = "audio/wav"
-        elif file.content_type == "audio/ogg":
-            ext = ".ogg"
+        elif "ogg" in mime_type:
             mime_type = "audio/ogg"
+        else:
+            mime_type = "audio/webm"  # Default
             
-        print(f"DEBUG: Using extension {ext} and mime type {mime_type}")
-            
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_audio:
-            temp_audio.write(content)
-            temp_audio_path = temp_audio.name
-            
+        print(f"DEBUG: Using mime type: {mime_type}")
+        
+        # Use Gemini with inline audio data (no File API upload needed)
+        import asyncio
+        import base64
+        loop = asyncio.get_running_loop()
+        
         try:
-            # Upload to Gemini using executor to avoid blocking
-            import asyncio
-            loop = asyncio.get_running_loop()
-            
-            print(f"DEBUG: Uploading file to Gemini...")
-            auth_file = await loop.run_in_executor(
-                None,
-                genai.upload_file,
-                temp_audio_path,
-                mime_type
-            )
-            print(f"DEBUG: File uploaded successfully: {auth_file.name}")
-            
-            # Transcribe using Gemini
             model = genai.GenerativeModel('gemini-1.5-flash')
-            print(f"DEBUG: Generating transcription...")
             
-            response = await loop.run_in_executor(
-                None,
-                model.generate_content,
-                ["Transcribe the following audio exactly as spoken. Return only the transcribed text, nothing else.", auth_file]
-            )
+            # Create inline data part
+            audio_part = {
+                "mime_type": mime_type,
+                "data": base64.b64encode(content).decode('utf-8')
+            }
             
-            print(f"DEBUG: Transcription complete")
+            print(f"DEBUG: Generating transcription with inline audio...")
+            
+            # Generate content with inline audio
+            def generate_transcription():
+                return model.generate_content([
+                    "Please transcribe the following audio recording exactly as spoken. Return only the transcribed text with no additional commentary or formatting.",
+                    {"inline_data": audio_part}
+                ])
+            
+            response = await loop.run_in_executor(None, generate_transcription)
+            
+            print(f"DEBUG: Transcription response received")
             
             if not response or not response.text:
-                raise Exception("Empty response from AI")
-                
+                print(f"ERROR: Empty response from AI. Response: {response}")
+                raise Exception("AI returned empty transcription")
+            
             transcribed_text = response.text.strip()
-            print(f"DEBUG: Transcribed text: {transcribed_text[:100]}...")
-                
+            print(f"DEBUG: Transcription successful: {transcribed_text[:100]}...")
+            
             return {"text": transcribed_text}
             
-        except Exception as inner_e:
-            print(f"ERROR in transcription process: {type(inner_e).__name__}: {str(inner_e)}")
-            raise
-        finally:
-            # Cleanup local temp file
-            if os.path.exists(temp_audio_path):
-                os.remove(temp_audio_path)
-                print(f"DEBUG: Cleaned up temp file")
+        except Exception as ai_error:
+            print(f"ERROR in Gemini transcription: {type(ai_error).__name__}: {str(ai_error)}")
+            # Try to provide more specific error message
+            error_detail = str(ai_error)
+            if "quota" in error_detail.lower():
+                raise HTTPException(status_code=429, detail="API quota exceeded. Please try again later.")
+            elif "invalid" in error_detail.lower() and "audio" in error_detail.lower():
+                raise HTTPException(status_code=400, detail="Audio format not supported. Please try recording again.")
+            else:
+                raise HTTPException(status_code=500, detail=f"Transcription failed: {error_detail}")
                 
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
     except Exception as e:
-        error_msg = f"Failed to transcribe audio: {type(e).__name__}: {str(e)}"
+        error_msg = f"{type(e).__name__}: {str(e)}"
         print(f"TRANSCRIPTION ERROR: {error_msg}")
-        raise HTTPException(status_code=500, detail=error_msg)
+        raise HTTPException(status_code=500, detail=f"Failed to process audio: {error_msg}")
 
 @app.post("/chat")
 async def chat(request: ChatRequest, current_user: UserDB = Depends(get_current_active_user), db: Session = Depends(get_db)):
