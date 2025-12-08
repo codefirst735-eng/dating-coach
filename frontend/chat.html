@@ -351,57 +351,56 @@
         </div>
 
         <style>
-            /* Premium Minimize/Maximize Controls - Mobile Only */
-            #chatControls {
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                max-height: 200px;
-                opacity: 1;
-                overflow: hidden;
-                position: relative;
-            }
-
-            /* Subtle toggle indicator - Mobile only */
-            .controls-toggle-indicator {
-                position: absolute;
-                top: 6px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 36px;
-                height: 4px;
-                background: rgba(255, 255, 255, 0.2);
-                border-radius: 2px;
-                transition: all 0.3s;
-                cursor: pointer;
-                z-index: 10;
+            /* Mobile Controls Toggle - Professional Design */
+            .mobile-controls-toggle {
                 display: none;
                 /* Hidden by default */
+                position: fixed;
+                bottom: 180px;
+                /* Above input area */
+                right: 16px;
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+                border: 2px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+                cursor: pointer;
+                z-index: 1000;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
-            /* Show indicator only on mobile */
+            .mobile-controls-toggle:active {
+                transform: scale(0.95);
+            }
+
+            .mobile-controls-toggle svg {
+                transition: transform 0.3s ease;
+            }
+
+            .chat-input-area.minimized .mobile-controls-toggle svg {
+                transform: rotate(180deg);
+            }
+
+            /* Show toggle button only on mobile */
             @media (max-width: 768px) {
+                .mobile-controls-toggle {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
                 #chatControls {
-                    padding-top: 16px;
-                    /* Space for indicator on mobile */
-                }
-
-                .controls-toggle-indicator {
-                    display: block;
-                }
-
-                .controls-toggle-indicator:active {
-                    background: rgba(255, 255, 255, 0.4);
+                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                    max-height: 200px;
+                    opacity: 1;
+                    overflow: hidden;
                 }
 
                 .chat-input-area.minimized #chatControls {
                     max-height: 0;
                     opacity: 0;
                     margin-bottom: 0 !important;
-                    padding-top: 0;
-                }
-
-                .chat-input-area.minimized .controls-toggle-indicator {
-                    top: -8px;
-                    background: rgba(255, 255, 255, 0.3);
                 }
             }
 
@@ -415,8 +414,6 @@
             <!-- Settings Row -->
             <!-- Controls Row -->
             <div class="row g-2 mb-3" id="chatControls">
-                <!-- Toggle Indicator -->
-                <div class="controls-toggle-indicator" id="controlsToggle" title="Click to hide/show controls"></div>
                 <!-- Gender Toggle -->
                 <div class="col-12 col-md-6" id="genderToggleContainer">
                     <div class="btn-group w-100" role="group">
@@ -507,6 +504,14 @@
             </form>
         </div>
     </div>
+
+    <!-- Mobile Controls Toggle Button -->
+    <button class="mobile-controls-toggle" id="mobileControlsToggle" aria-label="Toggle controls">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="white" viewBox="0 0 16 16">
+            <path fill-rule="evenodd"
+                d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z" />
+        </svg>
+    </button>
 
     <!-- Footer Component - Removed for cleaner UI
     <div id="footer-placeholder"></div> -->
@@ -1186,65 +1191,31 @@
             }
         });
 
-        // --- Minimize/Maximize Controls (Mobile Only) ---
+        // --- Mobile Controls Toggle (Click only - Professional) ---
         const chatInputArea = document.querySelector('.chat-input-area');
         const chatControls = document.getElementById('chatControls');
         const chatHistoryContainer = document.querySelector('.chat-history');
-        const controlsToggle = document.getElementById('controlsToggle');
+        const mobileToggleBtn = document.getElementById('mobileControlsToggle');
 
-        // Only enable on mobile
-        if (chatInputArea && chatControls && controlsToggle && window.innerWidth <= 768) {
-            let startY = 0;
-            let currentY = 0;
-            let isDragging = false;
+        if (chatInputArea && chatControls && mobileToggleBtn && window.innerWidth <= 768) {
             let isMinimized = false;
 
-            // Touch Swipe Logic on the controls area itself
-            chatControls.addEventListener('touchstart', (e) => {
-                startY = e.touches[0].clientY;
-                isDragging = true;
-            }, { passive: true });
-
-            chatControls.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                currentY = e.touches[0].clientY;
-            }, { passive: true });
-
-            chatControls.addEventListener('touchend', (e) => {
-                if (!isDragging) return;
-                isDragging = false;
-
-                const deltaY = currentY - startY;
-                const threshold = 30; // Lower threshold for easier swipe
-
-                if (!isMinimized && deltaY > threshold) {
-                    // Swiped Down -> Minimize
-                    toggleMinimize(true);
-                } else if (isMinimized && deltaY < -threshold) {
-                    // Swiped Up -> Expand  
-                    toggleMinimize(false);
-                }
-
-                // Reset
-                startY = 0;
-                currentY = 0;
+            // Click to toggle
+            mobileToggleBtn.addEventListener('click', () => {
+                toggleMinimize();
             });
 
-            function toggleMinimize(forceState = null) {
-                if (forceState !== null) {
-                    isMinimized = forceState;
-                } else {
-                    isMinimized = !isMinimized;
-                }
+            function toggleMinimize() {
+                isMinimized = !isMinimized;
 
                 if (isMinimized) {
                     chatInputArea.classList.add('minimized');
-                    if (window.innerWidth <= 768) {
+                    if (chatHistoryContainer) {
                         chatHistoryContainer.style.paddingBottom = '6rem';
                     }
                 } else {
                     chatInputArea.classList.remove('minimized');
-                    if (window.innerWidth <= 768) {
+                    if (chatHistoryContainer) {
                         chatHistoryContainer.style.paddingBottom = '14rem';
                     }
                 }
