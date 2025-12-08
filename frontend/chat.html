@@ -350,11 +350,73 @@
             </div>
         </div>
 
+        <style>
+            /* Premium Minimize/Maximize Controls - Mobile Only */
+            #chatControls {
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                max-height: 200px;
+                opacity: 1;
+                overflow: hidden;
+                position: relative;
+            }
+
+            /* Subtle toggle indicator - Mobile only */
+            .controls-toggle-indicator {
+                position: absolute;
+                top: 6px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 36px;
+                height: 4px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 2px;
+                transition: all 0.3s;
+                cursor: pointer;
+                z-index: 10;
+                display: none;
+                /* Hidden by default */
+            }
+
+            /* Show indicator only on mobile */
+            @media (max-width: 768px) {
+                #chatControls {
+                    padding-top: 16px;
+                    /* Space for indicator on mobile */
+                }
+
+                .controls-toggle-indicator {
+                    display: block;
+                }
+
+                .controls-toggle-indicator:active {
+                    background: rgba(255, 255, 255, 0.4);
+                }
+
+                .chat-input-area.minimized #chatControls {
+                    max-height: 0;
+                    opacity: 0;
+                    margin-bottom: 0 !important;
+                    padding-top: 0;
+                }
+
+                .chat-input-area.minimized .controls-toggle-indicator {
+                    top: -8px;
+                    background: rgba(255, 255, 255, 0.3);
+                }
+            }
+
+            .chat-input-area {
+                transition: transform 0.3s ease;
+            }
+        </style>
+
         <div class="chat-input-area">
             <!-- Gender Toggle - Inside fixed input area -->
             <!-- Settings Row -->
             <!-- Controls Row -->
             <div class="row g-2 mb-3" id="chatControls">
+                <!-- Toggle Indicator -->
+                <div class="controls-toggle-indicator" id="controlsToggle" title="Click to hide/show controls"></div>
                 <!-- Gender Toggle -->
                 <div class="col-12 col-md-6" id="genderToggleContainer">
                     <div class="btn-group w-100" role="group">
@@ -1062,16 +1124,24 @@
                         formData.append('file', audioBlob, 'recording' + (mimeType === 'audio/mp4' ? '.m4a' : '.webm'));
 
                         try {
+                            // Get fresh token
+                            const currentToken = localStorage.getItem('access_token');
+                            if (!currentToken) {
+                                throw new Error('Please log in to use voice recording');
+                            }
+
                             const response = await fetch(`${API_BASE_URL}/transcribe`, {
                                 method: 'POST',
                                 headers: {
-                                    'Authorization': `Bearer ${token}`
+                                    'Authorization': `Bearer ${currentToken}`
                                 },
                                 body: formData
                             });
 
                             if (!response.ok) {
-                                throw new Error('Transcription failed');
+                                const errorData = await response.json().catch(() => ({}));
+                                const errorMsg = errorData.detail || `Transcription failed (${response.status})`;
+                                throw new Error(errorMsg);
                             }
 
                             const data = await response.json();
@@ -1080,7 +1150,8 @@
 
                         } catch (error) {
                             console.error('Transcription error:', error);
-                            showToast('Failed to transcribe audio. Please try again.', 'error');
+                            const errorMessage = error.message || 'Failed to transcribe audio. Please try again.';
+                            showToast(errorMessage, 'error');
                         } finally {
                             // Reset UI
                             userInput.placeholder = "Describe your situation...";
@@ -1114,6 +1185,71 @@
                 }
             }
         });
+
+        // --- Minimize/Maximize Controls (Mobile Only) ---
+        const chatInputArea = document.querySelector('.chat-input-area');
+        const chatControls = document.getElementById('chatControls');
+        const chatHistoryContainer = document.querySelector('.chat-history');
+        const controlsToggle = document.getElementById('controlsToggle');
+
+        // Only enable on mobile
+        if (chatInputArea && chatControls && controlsToggle && window.innerWidth <= 768) {
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+            let isMinimized = false;
+
+            // Touch Swipe Logic on the controls area itself
+            chatControls.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+            }, { passive: true });
+
+            chatControls.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentY = e.touches[0].clientY;
+            }, { passive: true });
+
+            chatControls.addEventListener('touchend', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+
+                const deltaY = currentY - startY;
+                const threshold = 30; // Lower threshold for easier swipe
+
+                if (!isMinimized && deltaY > threshold) {
+                    // Swiped Down -> Minimize
+                    toggleMinimize(true);
+                } else if (isMinimized && deltaY < -threshold) {
+                    // Swiped Up -> Expand  
+                    toggleMinimize(false);
+                }
+
+                // Reset
+                startY = 0;
+                currentY = 0;
+            });
+
+            function toggleMinimize(forceState = null) {
+                if (forceState !== null) {
+                    isMinimized = forceState;
+                } else {
+                    isMinimized = !isMinimized;
+                }
+
+                if (isMinimized) {
+                    chatInputArea.classList.add('minimized');
+                    if (window.innerWidth <= 768) {
+                        chatHistoryContainer.style.paddingBottom = '6rem';
+                    }
+                } else {
+                    chatInputArea.classList.remove('minimized');
+                    if (window.innerWidth <= 768) {
+                        chatHistoryContainer.style.paddingBottom = '14rem';
+                    }
+                }
+            }
+        }
     </script>
 </body>
 

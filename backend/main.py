@@ -555,27 +555,39 @@ async def transcribe_audio(
             
         print(f"DEBUG: Using mime type: {mime_type}")
         
-        # Use Gemini with inline audio data (no File API upload needed)
+        print(f"DEBUG: Using mime type: {mime_type}")
+        
+        # Use Inline Data for robustness (avoid File API connection resets)
+        # We use the official google.ai.generativelanguage types
         import asyncio
-        import base64
+        from google.ai import generativelanguage as glm
+        
         loop = asyncio.get_running_loop()
         
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # Use gemini-flash-latest as confirmed by ListModels
+            model = genai.GenerativeModel('gemini-flash-latest')
             
-            # Create inline data part
-            audio_part = {
-                "mime_type": mime_type,
-                "data": base64.b64encode(content).decode('utf-8')
-            }
+            print(f"DEBUG: Preparing inline audio data ({len(content)} bytes)...")
             
-            print(f"DEBUG: Generating transcription with inline audio...")
+            # Create proper inline data part using Gemini SDK format
+            # This avoids uploading to a separate File API endpoint
+            audio_blob = glm.Blob(
+                mime_type=mime_type,
+                data=content
+            )
             
-            # Generate content with inline audio
+            audio_part = glm.Part(
+                inline_data=audio_blob
+            )
+            
+            print(f"DEBUG: Generating transcription...")
+            
+            # Generate transcription
             def generate_transcription():
                 return model.generate_content([
-                    "Please transcribe the following audio recording exactly as spoken. Return only the transcribed text with no additional commentary or formatting.",
-                    {"inline_data": audio_part}
+                    "Please transcribe this audio recording word-for-word. Return only the transcribed text, nothing else.",
+                    audio_part
                 ])
             
             response = await loop.run_in_executor(None, generate_transcription)
@@ -583,7 +595,7 @@ async def transcribe_audio(
             print(f"DEBUG: Transcription response received")
             
             if not response or not response.text:
-                print(f"ERROR: Empty response from AI. Response: {response}")
+                print(f"ERROR: Empty response from AI")
                 raise Exception("AI returned empty transcription")
             
             transcribed_text = response.text.strip()
@@ -601,6 +613,10 @@ async def transcribe_audio(
                 raise HTTPException(status_code=400, detail="Audio format not supported. Please try recording again.")
             else:
                 raise HTTPException(status_code=500, detail=f"Transcription failed: {error_detail}")
+        finally:
+             if 'temp_audio_path' in locals() and os.path.exists(temp_audio_path):
+                 os.remove(temp_audio_path)
+                 print(f"DEBUG: Cleaned up local temp file")
                 
     except HTTPException:
         raise  # Re-raise HTTP exceptions as-is
@@ -720,7 +736,7 @@ Your goal is to sound like a real person who deeply understands male dating dyna
         
         # Initialize model with system instruction
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-flash-latest",
             system_instruction=system_prompt
         )
         
@@ -867,12 +883,12 @@ async def clear_chat_history(
 @app.post("/analyze-screenshot")
 async def analyze_screenshot(
     files: List[UploadFile] = File(...), 
-    user_color: str = "blue",
-    other_color: str = "gray",
-    user_gender: str = "male",
-    other_gender: str = "female",
-    goal: str = "build_attraction",
-    language: str = "english",
+    user_color: str = Query("blue"),
+    other_color: str = Query("gray"),
+    user_gender: str = Query("male"),
+    other_gender: str = Query("female"),
+    goal: str = Query("build_attraction"),
+    language: str = Query("english"),
     current_user: UserDB = Depends(get_current_active_user), 
     db: Session = Depends(get_db)
 ):
@@ -1003,7 +1019,7 @@ Do not include markdown formatting (like ```json) in the response, just the raw 
 
 
         # Initialize Gemini model with vision capability
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-flash-latest')
         
         import base64
         
@@ -1028,8 +1044,11 @@ Do not include markdown formatting (like ```json) in the response, just the raw 
                 partial(model.generate_content, prompt_parts)
             )
         except Exception as e:
-            print(f"Gemini generation error: {e}")
-            raise HTTPException(status_code=500, detail="AI generation failed. The image might be unclear or violate safety policies.")
+            print(f"Gemini generation error type: {type(e).__name__}")
+            print(f"Gemini generation error: {str(e)}")
+            import traceback
+            print(f"Full traceback:\n{traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
 
         # Check for safety blocks or empty response
         if not response.parts:
@@ -1204,7 +1223,7 @@ Keep your response focused and actionable.
     try:
         # Initialize model - ensure API key is configured globally or passed here if needed
         # Assuming genai.configure(api_key=...) is called at startup
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-flash-latest')
         
         # Run synchronous generation in a thread pool to avoid blocking the event loop
         import asyncio
@@ -1318,7 +1337,7 @@ Your goal is to sound like a real person who deeply understands female dating dy
         
         # Initialize model with system instruction
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-flash-latest",
             system_instruction=system_prompt
         )
         
@@ -1444,7 +1463,7 @@ Do not include markdown formatting (like ```json) in the response, just the raw 
 """
 
         # Initialize Gemini model with vision capability
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-flash-latest')
         
         # Create the image part for Gemini
         import base64
