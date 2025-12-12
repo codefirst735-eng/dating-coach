@@ -288,16 +288,25 @@
 
                     <hr class="border-secondary my-3">
 
-                    <p class="fw-bold mb-2">Your conversation goal:</p>
-                    <select class="form-select form-select-sm bg-dark text-light border-secondary mb-3"
-                        id="conversationGoal">
-                        <option value="build_attraction">Build attraction and interest</option>
-                        <option value="get_date">Get a date/meetup</option>
-                        <option value="maintain_interest">Keep them engaged</option>
-                        <option value="re_engage">Re-engage after silence</option>
-                        <option value="escalate">Escalate intimacy</option>
-                        <option value="end_politely">End things politely</option>
-                        <option value="general">General advice</option>
+                    <p class="fw-bold mb-2">What do you want to achieve in this conversation?</p>
+                    <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary mb-3"
+                        id="conversationGoal"
+                        placeholder="e.g., Build attraction, Get a date, Re-engage after silence..."
+                        value="Build attraction and romantic interest">
+                    <small class="text-white-50 d-block mb-3">Be specific about your goal - the AI will tailor advice
+                        accordingly</small>
+
+                    <p class="fw-bold mb-2">Preferred tone/style for replies:</p>
+                    <select class="form-select form-select-sm bg-dark text-light border-secondary mb-3" id="replyTone">
+                        <option value="balanced">Balanced (Mix of styles)</option>
+                        <option value="playful">Playful & Teasing</option>
+                        <option value="direct">Direct & Confident</option>
+                        <option value="mysterious">Mysterious & Intriguing</option>
+                        <option value="casual">Casual & Friendly</option>
+                        <option value="witty">Witty & Clever</option>
+                        <option value="romantic">Romantic & Sweet</option>
+                        <option value="cocky_funny">Cocky-Funny</option>
+                        <option value="challenge">Challenge/Push-Pull</option>
                     </select>
 
                     <p class="fw-bold mb-2">Preferred language for replies:</p>
@@ -407,11 +416,17 @@
         const guestBanner = document.getElementById('guestBanner'); // Assuming this element exists in components.js or elsewhere
         const queriesRemaining = document.getElementById('queriesRemaining'); // Assuming this element exists
 
-        // Check for token and guest query count
+        // Require login - redirect if no token
         const token = localStorage.getItem('access_token');
-        const isGuest = !token;
-        let guestQueryCount = parseInt(localStorage.getItem('guest_query_count') || '0');
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const isGuest = false; // No longer support guest mode
+        let guestQueryCount = 0; // Not used anymore
         const GUEST_QUERY_LIMIT = 3;
+
 
         if (isGuest) {
             // Block access visually for guests
@@ -647,6 +662,13 @@
                     <p class="text-white-50" style="font-size: 0.95rem; line-height: 1.6;">${formatAnalysisText(data.reasoning)}</p>
                 </div>
                 
+                <div class="mt-3 p-2 rounded-3" style="background-color: rgba(255, 182, 193, 0.15); border: 1px solid rgba(255, 182, 193, 0.3);">
+                    <p class="mb-0" style="font-size: 0.8rem; line-height: 1.4; color: #ffb6c1;">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        <strong>Tip:</strong> Feel free to use these replies as-is or tweak them to match your personal style and the conversation flow. The key is making it feel natural and authentic to you.
+                    </p>
+                </div>
+                
                 ${!isGuest && data.id ? `
                 <!-- Follow-up section removed -->
                 ` : ''}
@@ -707,8 +729,9 @@
             const otherColor = document.getElementById('otherColor').value.trim() || 'gray';
             const userGender = document.getElementById('userGender').value;
             const otherGender = document.getElementById('otherGender').value;
-            const conversationGoal = document.getElementById('conversationGoal').value;
+            const conversationGoal = document.getElementById('conversationGoal').value.trim() || 'General dating advice';
             const replyLanguage = document.getElementById('replyLanguage').value;
+            const replyTone = document.getElementById('replyTone').value;
 
             // Save preferences for next time
             savePreferences();
@@ -720,10 +743,10 @@
                 let endpoint, headers;
 
                 if (isGuest) {
-                    endpoint = `${API_BASE_URL}/guest-analyze?user_color=${encodeURIComponent(userColor)}&other_color=${encodeURIComponent(otherColor)}&user_gender=${userGender}&other_gender=${otherGender}&goal=${encodeURIComponent(conversationGoal)}&language=${encodeURIComponent(replyLanguage)}`;
+                    endpoint = `${API_BASE_URL}/guest-analyze?user_color=${encodeURIComponent(userColor)}&other_color=${encodeURIComponent(otherColor)}&user_gender=${userGender}&other_gender=${otherGender}&goal=${encodeURIComponent(conversationGoal)}&language=${encodeURIComponent(replyLanguage)}&tone=${encodeURIComponent(replyTone)}`;
                     headers = {};
                 } else {
-                    endpoint = `${API_BASE_URL}/analyze-screenshot?user_color=${encodeURIComponent(userColor)}&other_color=${encodeURIComponent(otherColor)}&user_gender=${userGender}&other_gender=${otherGender}&goal=${encodeURIComponent(conversationGoal)}&language=${encodeURIComponent(replyLanguage)}`;
+                    endpoint = `${API_BASE_URL}/analyze-screenshot?user_color=${encodeURIComponent(userColor)}&other_color=${encodeURIComponent(otherColor)}&user_gender=${userGender}&other_gender=${otherGender}&goal=${encodeURIComponent(conversationGoal)}&language=${encodeURIComponent(replyLanguage)}&tone=${encodeURIComponent(replyTone)}`;
                     headers = { 'Authorization': `Bearer ${token}` };
                 }
 

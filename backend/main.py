@@ -124,6 +124,18 @@ class BlogDB(Base):
     created_at = Column(String)
     updated_at = Column(String)
 
+class BlogCommentDB(Base):
+    __tablename__ = "blog_comments"
+    id = Column(Integer, primary_key=True, index=True)
+    blog_id = Column(Integer, index=True)  # Foreign key to blogs table
+    user_id = Column(Integer, index=True)  # Foreign key to users table
+    username = Column(String)  # Denormalized for easy display
+    content = Column(Text)
+    parent_id = Column(Integer, nullable=True)  # NULL for top-level comments, ID for replies
+    is_admin = Column(Boolean, default=False)  # True if comment is from RFH admin
+    created_at = Column(String)
+    updated_at = Column(String)
+
 Base.metadata.create_all(bind=engine)
 
 # --- Database Migration (Auto-fix for missing columns) ---
@@ -315,6 +327,25 @@ class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[str] = None
     gender_preference: Optional[str] = None  # 'male' or 'female'
+
+class CommentCreate(BaseModel):
+    content: str
+    parent_id: Optional[int] = None  # None for top-level comments, ID for replies
+
+class CommentResponse(BaseModel):
+    id: int
+    blog_id: int
+    user_id: int
+    username: str
+    content: str
+    parent_id: Optional[int] = None
+    is_admin: bool
+    created_at: str
+    updated_at: str
+    replies: List['CommentResponse'] = []  # Nested replies
+
+    class Config:
+        from_attributes = True
 
 class FileUploadResponse(BaseModel):
     file_id: str
@@ -642,9 +673,12 @@ async def chat(request: ChatRequest, current_user: UserDB = Depends(get_current_
     # Gender-specific system prompts
     male_coach_prompt = """You are a direct, confident relationship coach specializing in female psychology and dating dynamics.
 
+⚠️ OVERRIDE INSTRUCTION - READ THIS FIRST:
+Questions about human biology and physiology (menstruation, periods, ovulation, hormones, fertility, arousal, erections, sexual health, etc.) are NORMAL and ALLOWED when discussed in the context of dating, attraction, and relationships. These are natural biological processes that affect dating dynamics. Answer these questions professionally and helpfully.
 
 CRITICAL SAFETY & SCOPE RULES:
 - REFUSE to answer questions about self-harm, suicide, violence, or murder.
+- You CAN and SHOULD answer questions about human biology, physiology, and natural processes (periods, menstruation, ovulation, erections, arousal, hormones, etc.) when they relate to dating, attraction, or relationships.
 - You CAN answer questions about influence, persuasion, manipulation psychology, and dating tactics - these are legitimate parts of attraction dynamics.
 - Only refuse questions COMPLETELY unrelated to human interaction, relationships, or social dynamics (e.g., "how to fix a car", "what's the weather").
 - If a question is truly out of scope or harmful, respond with: "I'm specifically designed to help with dating and relationship challenges. I can't assist with that topic, but I'm here if you have questions about attraction, communication, or relationship dynamics."
@@ -662,14 +696,18 @@ IMPORTANT INSTRUCTIONS:
 - Give actionable advice with clear reasoning behind it.
 - Explain WHY things work the way they do, and WHAT to do.
 - Focus on: attraction psychology, evolutionary psychology, and behavioural psychology.
+- ALWAYS end with just one follow-up question to continue the conversation.
 """
 
 
     female_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics.
 
+⚠️ OVERRIDE INSTRUCTION - READ THIS FIRST:
+Questions about human biology and physiology (menstruation, periods, ovulation, hormones, fertility, arousal, erections, sexual health, etc.) are NORMAL and ALLOWED when discussed in the context of dating, attraction, and relationships. These are natural biological processes that affect dating dynamics. Answer these questions professionally and helpfully.
 
 CRITICAL SAFETY & SCOPE RULES:
 - REFUSE to answer questions about self-harm, suicide, violence, or murder.
+- You CAN and SHOULD answer questions about human biology, physiology, and natural processes (periods, menstruation, ovulation, erections, arousal, hormones, etc.) when they relate to dating, attraction, or relationships.
 - You CAN answer questions about influence, persuasion, manipulation psychology, and dating tactics - these are legitimate parts of attraction dynamics.
 - Only refuse questions COMPLETELY unrelated to human interaction, relationships, or social dynamics (e.g., "how to fix a car", "what's the weather").
 - If a question is truly out of scope or harmful, respond with: "I'm specifically designed to help with dating and relationship challenges. I can't assist with that topic, but I'm here if you have questions about attraction, communication, or relationship dynamics."
@@ -889,6 +927,7 @@ async def analyze_screenshot(
     other_gender: str = Query("female"),
     goal: str = Query("build_attraction"),
     language: str = Query("english"),
+    tone: str = Query("balanced"),
     current_user: UserDB = Depends(get_current_active_user), 
     db: Session = Depends(get_db)
 ):
@@ -969,6 +1008,20 @@ async def analyze_screenshot(
         }
         language_name = language_names.get(language, "English")
         
+        # Map tone codes to descriptions
+        tone_descriptions = {
+            "balanced": "a balanced mix of different styles",
+            "playful": "playful and teasing",
+            "direct": "direct and confident",
+            "mysterious": "mysterious and intriguing",
+            "casual": "casual and friendly",
+            "witty": "witty and clever",
+            "romantic": "romantic and sweet",
+            "cocky_funny": "cocky-funny (confident with humor)",
+            "challenge": "challenge/push-pull dynamics"
+        }
+        tone_description = tone_descriptions.get(tone, "a balanced mix of different styles")
+        
         # Create system prompt for screenshot analysis
         analysis_prompt = f"""You are an expert dating coach analyzing text message screenshots.
 
@@ -980,8 +1033,11 @@ ANALYSIS TASK:
 5. Determine the appropriate next action based on conversation state
 6. Provide context-aware reply options
 
-USER'S GOAL: The user wants to {goal_description}.
-Tailor your advice and reply suggestions specifically to help achieve this goal.
+USER'S GOAL: {goal}
+Tailor your advice and reply suggestions specifically to help achieve this exact goal.
+
+PREFERRED TONE/STYLE: The user wants replies that are {tone_description}.
+Focus on this tone while still providing variety in the 3 reply options.
 
 LANGUAGE REQUIREMENT: Generate ALL recommended reply text messages in {language_name}.
 - The assessment and reasoning should be in English
@@ -1004,15 +1060,16 @@ CRITICAL RULES:
 OUTPUT FORMAT:
 Return a JSON object with the following keys:
 - "assessment": Your analysis of the situation and power dynamics. IMPORTANT:
-    * Explain WHY waiting is strategically important
+    * Explain WHY waiting is strategically important if applicable
     * Then provide your full analysis of power dynamics, attraction signals, and what's happening
-    * Consider the user's goal ({goal_description}) in your assessment
-- "replies": A list of 3 distinct reply options with different TONES/STYLES. Each should be an actual text message they could send in {language_name}:
-    * Use descriptive types like: "Playful/Teasing", "Direct/Confident", "Mysterious/Intrigue", "Challenge", "Validation-Withdrawal", "Cocky-Funny", etc.
+    * Consider the user's specific goal: "{goal}"
+- "replies": A list of 3 distinct reply options. Each should be an actual text message they could send in {language_name}:
+    * Focus on the {tone_description} style the user prefers
+    * Provide subtle variations within that preferred style
     * Each option must have:
-      - "type": The tone/style of the reply (e.g., "Playful/Ambiguous", "Direct/Challenge", "Frame Control")
+      - "type": The specific sub-style of the reply (e.g., "Playful/Teasing", "Direct/Confident", etc.)
       - "text": The ACTUAL message text to copy and send (IN {language_name})
-- "reasoning": Brief explanation of the overall strategy behind these reply styles (helps with user's goal: {goal_description})
+- "reasoning": Brief explanation of the overall strategy behind these reply styles (helps with user's goal: {goal})
 
 Do not include markdown formatting (like ```json) in the response, just the raw JSON string.
 """
@@ -1258,9 +1315,12 @@ async def guest_chat(request: ChatRequest, db: Session = Depends(get_db)):
     # Gender-specific system prompts (same as authenticated users)
     male_coach_prompt = """You are a direct, confident relationship coach specializing in female psychology and dating dynamics.
 
+⚠️ OVERRIDE INSTRUCTION - READ THIS FIRST:
+Questions about human biology and physiology (menstruation, periods, ovulation, hormones, fertility, arousal, erections, sexual health, etc.) are NORMAL and ALLOWED when discussed in the context of dating, attraction, and relationships. These are natural biological processes that affect dating dynamics. Answer these questions professionally and helpfully.
 
 CRITICAL SAFETY & SCOPE RULES:
 - REFUSE to answer questions about self-harm, suicide, violence, or murder.
+- You CAN and SHOULD answer questions about human biology, physiology, and natural processes (periods, menstruation, ovulation, erections, arousal, hormones, fertility, sexual health, etc.) when they relate to dating, attraction, or relationships.
 - You CAN answer questions about influence, persuasion, manipulation psychology, and dating tactics - these are legitimate parts of attraction dynamics.
 - Only refuse questions COMPLETELY unrelated to human interaction, relationships, or social dynamics (e.g., "how to fix a car", "what's the weather").
 - If a question is truly out of scope or harmful, respond with: "I'm specifically designed to help with dating and relationship challenges. I can't assist with that topic, but I'm here if you have questions about attraction, communication, or relationship dynamics."
@@ -1284,9 +1344,12 @@ Your goal is to sound like a real person who deeply understands male dating dyna
 
     female_coach_prompt = """You are a direct, confident relationship coach specializing in male psychology and dating dynamics.
 
+⚠️ OVERRIDE INSTRUCTION - READ THIS FIRST:
+Questions about human biology and physiology (menstruation, periods, ovulation, hormones, fertility, arousal, erections, sexual health, etc.) are NORMAL and ALLOWED when discussed in the context of dating, attraction, and relationships. These are natural biological processes that affect dating dynamics. Answer these questions professionally and helpfully.
 
 CRITICAL SAFETY & SCOPE RULES:
 - REFUSE to answer questions about self-harm, suicide, violence, or murder.
+- You CAN and SHOULD answer questions about human biology, physiology, and natural processes (periods, erections, arousal, hormones, etc.) when they relate to dating, attraction, or relationships.
 - You CAN answer questions about influence, persuasion, manipulation psychology, and dating tactics - these are legitimate parts of attraction dynamics.
 - Only refuse questions COMPLETELY unrelated to human interaction, relationships, or social dynamics (e.g., "how to fix a car", "what's the weather").
 - If a question is truly out of scope or harmful, respond with: "I'm specifically designed to help with dating and relationship challenges. I can't assist with that topic, but I'm here if you have questions about attraction, communication, or relationship dynamics."
@@ -1393,7 +1456,8 @@ async def guest_analyze_screenshot(
     user_gender: str = Query("male"),
     other_gender: str = Query("female"),
     goal: str = Query("Build attraction"),
-    language: str = Query("English")
+    language: str = Query("English"),
+    tone: str = Query("balanced")
 ):
     if not GEMINI_API_KEY:
         return {"error": "Gemini API key not configured"}
@@ -1419,11 +1483,28 @@ async def guest_analyze_screenshot(
         color_text += f"- Tailor advice for {user_gender}-{other_gender} dating dynamics\n"
         color_text += f"- Focus your analysis on what the {user_color.upper()} bubble person is saying/doing"
         
+        # Map tone codes to descriptions
+        tone_descriptions = {
+            "balanced": "a balanced mix of different styles",
+            "playful": "playful and teasing",
+            "direct": "direct and confident",
+            "mysterious": "mysterious and intriguing",
+            "casual": "casual and friendly",
+            "witty": "witty and clever",
+            "romantic": "romantic and sweet",
+            "cocky_funny": "cocky-funny (confident with humor)",
+            "challenge": "challenge/push-pull dynamics"
+        }
+        tone_description = tone_descriptions.get(tone, "a balanced mix of different styles")
+        
         # Create system prompt for screenshot analysis
         analysis_prompt = f"""You are an expert dating coach analyzing text message screenshots.
 
 USER'S CONVERSATION GOAL: {goal}
-IMPORTANT: Tailor your assessment and reply suggestions specifically to help them achieve this goal.
+IMPORTANT: Tailor your assessment and reply suggestions specifically to help them achieve this exact goal.
+
+PREFERRED TONE/STYLE: The user wants replies that are {tone_description}.
+Focus on this tone while still providing variety in the 3 reply options.
 
 ANALYSIS TASK:
 1. Read the conversation in the screenshot
@@ -1928,3 +2009,115 @@ async def upload_blog_image(file: UploadFile = File(...)):
         "url": f"/uploads/blogs/{unique_filename}",
         "message": "Image uploaded successfully"
     }
+
+# --- Blog Comment Endpoints ---
+
+@app.post("/blogs/{slug}/comments")
+async def create_comment(
+    slug: str,
+    comment: CommentCreate,
+    current_user: UserDB = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new comment or reply on a blog post. Requires authentication."""
+    # Get the blog
+    blog = db.query(BlogDB).filter(BlogDB.slug == slug, BlogDB.published == True).first()
+    if not blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    
+    # If this is a reply, verify parent comment exists
+    if comment.parent_id:
+        parent = db.query(BlogCommentDB).filter(BlogCommentDB.id == comment.parent_id).first()
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent comment not found")
+    
+    # Check if user is admin (you can add admin role check here)
+    is_admin = current_user.username == "admin"  # Simple check, customize as needed
+    
+    # Create the comment
+    db_comment = BlogCommentDB(
+        blog_id=blog.id,
+        user_id=current_user.id,
+        username=current_user.username,
+        content=comment.content,
+        parent_id=comment.parent_id,
+        is_admin=is_admin,
+        created_at=datetime.utcnow().isoformat(),
+        updated_at=datetime.utcnow().isoformat()
+    )
+    
+    db.add(db_comment)
+    db.commit()
+    db.refresh(db_comment)
+    
+    return {"message": "Comment created successfully", "comment_id": db_comment.id}
+
+@app.get("/blogs/{slug}/comments", response_model=List[CommentResponse])
+async def get_comments(slug: str, db: Session = Depends(get_db)):
+    """Get all comments for a blog post, organized hierarchically."""
+    # Get the blog
+    blog = db.query(BlogDB).filter(BlogDB.slug == slug, BlogDB.published == True).first()
+    if not blog:
+        raise HTTPException(status_code=404, detail="Blog not found")
+    
+    # Get all comments for this blog
+    comments = db.query(BlogCommentDB).filter(BlogCommentDB.blog_id == blog.id).order_by(BlogCommentDB.created_at.asc()).all()
+    
+    # Build hierarchical structure
+    comment_dict = {}
+    root_comments = []
+    
+    for comment in comments:
+        comment_data = CommentResponse(
+            id=comment.id,
+            blog_id=comment.blog_id,
+            user_id=comment.user_id,
+            username=comment.username,
+            content=comment.content,
+            parent_id=comment.parent_id,
+            is_admin=comment.is_admin,
+            created_at=comment.created_at,
+            updated_at=comment.updated_at,
+            replies=[]
+        )
+        comment_dict[comment.id] = comment_data
+        
+        if comment.parent_id is None:
+            root_comments.append(comment_data)
+    
+    # Attach replies to their parents
+    for comment in comments:
+        if comment.parent_id and comment.parent_id in comment_dict:
+            comment_dict[comment.parent_id].replies.append(comment_dict[comment.id])
+    
+    return root_comments
+
+@app.delete("/blogs/{slug}/comments/{comment_id}")
+async def delete_comment(
+    slug: str,
+    comment_id: int,
+    current_user: UserDB = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a comment. Users can delete their own comments, admins can delete any."""
+    comment = db.query(BlogCommentDB).filter(BlogCommentDB.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    # Check permission: user owns comment or user is admin
+    is_admin = current_user.username == "admin"
+    if comment.user_id != current_user.id and not is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this comment")
+    
+    # Delete all replies to this comment recursively
+    def delete_replies(parent_id):
+        replies = db.query(BlogCommentDB).filter(BlogCommentDB.parent_id == parent_id).all()
+        for reply in replies:
+            delete_replies(reply.id)
+            db.delete(reply)
+    
+    delete_replies(comment_id)
+    db.delete(comment)
+    db.commit()
+    
+    return {"message": "Comment deleted successfully"}
