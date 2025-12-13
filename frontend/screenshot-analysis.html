@@ -420,8 +420,9 @@
         const token = localStorage.getItem('access_token');
         if (!token) {
             window.location.href = 'login.html';
-            return;
+            // Stop execution by not continuing (redirect will happen)
         }
+
 
         const isGuest = false; // No longer support guest mode
         let guestQueryCount = 0; // Not used anymore

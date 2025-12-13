@@ -668,7 +668,7 @@
         const token = localStorage.getItem('access_token');
         if (!token) {
             window.location.href = 'login.html';
-            throw new Error('No token - redirecting'); // Stop execution
+            // Stop execution by not continuing (redirect will happen)
         }
 
         const isGuest = false; // No longer support guest mode
