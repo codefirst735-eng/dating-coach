@@ -128,9 +128,10 @@
         }
 
         .message.ai.female-coach {
-            background-color: #FFB6C1;
-            color: #000;
+            background-color: #E91E8C;
+            color: #FFFFFF;
         }
+
 
 
         .typing-indicator {
@@ -522,18 +523,6 @@
     <!-- Footer Component - Removed for cleaner UI
     <div id="footer-placeholder"></div> -->
 
-    <!-- IMMEDIATE LOGIN CHECK - Must happen before page renders -->
-    <script>
-        // Check token immediately on page load
-        (function () {
-            const token = localStorage.getItem('access_token');
-            if (!token) {
-                // No token - redirect immediately
-                window.location.replace('login.html');
-            }
-        })();
-    </script>
-
     <script src="js/components.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
@@ -547,6 +536,11 @@
         const chatHistory = document.getElementById('chatHistory');
         const typingIndicator = document.getElementById('typingIndicator');
         const scrollHint = document.getElementById('scrollHint');
+
+        // Global variable to track current gender preference
+        let currentGenderPreference = 'male'; // Default
+
+
 
         // Handle scroll hint visibility
         function checkScrollHint() {
@@ -674,7 +668,7 @@
         const token = localStorage.getItem('access_token');
         if (!token) {
             window.location.href = 'login.html';
-            return;
+            throw new Error('No token - redirecting'); // Stop execution
         }
 
         const isGuest = false; // No longer support guest mode
@@ -698,6 +692,7 @@
                     });
                     if (response.ok) {
                         const userData = await response.json();
+                        currentGenderPreference = userData.gender_preference || 'male';
                         if (userData.gender_preference === 'female') {
                             genderFemaleRadio.checked = true;
                         } else {
@@ -724,6 +719,7 @@
                     });
 
                     if (response.ok) {
+                        currentGenderPreference = gender;
                         console.log(`Gender preference updated to: ${gender}`);
                         // Reload chat history for the new coach type
                         loadChatHistory(gender);
@@ -875,8 +871,16 @@
             }
         }
 
-        chatForm.addEventListener('submit', async (e) => {
+        // Safety check: Ensure chatForm exists
+        if (!chatForm) {
+            console.error('chatForm element not found!');
+        } else {
+            console.log('chatForm found, attaching event listener');
+        }
+
+        chatForm?.addEventListener('submit', async (e) => {
             e.preventDefault();
+            console.log('Form submitted!'); // Debug log
 
             // Double-check token exists (in case page was cached)
             const currentToken = localStorage.getItem('access_token');
@@ -1079,8 +1083,7 @@
 
             // Add female-coach class if AI message and female coach is selected
             if (sender === 'ai') {
-                const currentGender = localStorage.getItem('gender_preference') || 'male';
-                if (currentGender === 'female') {
+                if (currentGenderPreference === 'female') {
                     messageDiv.classList.add('female-coach');
                 }
             }
